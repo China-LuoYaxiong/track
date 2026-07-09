@@ -1,0 +1,1956 @@
+{
+  "source_xlsx": "副本-5【odirouter】埋点方案与开发计划.xlsx",
+  "dev_plan_header": [
+    "埋点信息",
+    "页面标识",
+    "埋点事件\n事件后缀client标识前端上报\n事件后缀server标识后端上报",
+    "上报时机",
+    "上报参数详情",
+    "前后端埋点"
+  ],
+  "events": {
+    "log_credits_server": {
+      "display": "积分变动",
+      "attrs": [
+        {
+          "name": "nums",
+          "label": "变动量",
+          "type": "数值"
+        },
+        {
+          "name": "balance",
+          "label": "变动后的存量",
+          "type": "数值"
+        },
+        {
+          "name": "action",
+          "label": "引发原因",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_apikey_server": {
+      "display": "apikey变动日志",
+      "attrs": [
+        {
+          "name": "apikey",
+          "label": "apikey",
+          "type": "文本"
+        },
+        {
+          "name": "change_type",
+          "label": "变动类型",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_api_call_server": {
+      "display": "api调用",
+      "attrs": [
+        {
+          "name": "request_id",
+          "label": "请求id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "apikey",
+          "label": "apikey",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_api_call_failed_server": {
+      "display": "api调用失败",
+      "attrs": [
+        {
+          "name": "request_id",
+          "label": "请求id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "apikey",
+          "label": "apikey",
+          "type": "文本"
+        },
+        {
+          "name": "error_message",
+          "label": "错误信息",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_element_leave_client": {
+      "display": "元素离开",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "product_id",
+          "label": "商品id",
+          "type": "文本"
+        },
+        {
+          "name": "post_id",
+          "label": "帖子id",
+          "type": "文本"
+        },
+        {
+          "name": "video_id",
+          "label": "视频id",
+          "type": "文本"
+        },
+        {
+          "name": "game_id",
+          "label": "游戏id",
+          "type": "文本"
+        },
+        {
+          "name": "work_id",
+          "label": "作品id",
+          "type": "文本"
+        },
+        {
+          "name": "agent_id",
+          "label": "agentid",
+          "type": "文本"
+        },
+        {
+          "name": "item_id",
+          "label": "物品id",
+          "type": "文本"
+        },
+        {
+          "name": "author_id",
+          "label": "作者id",
+          "type": "文本"
+        },
+        {
+          "name": "task_id",
+          "label": "任务id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "creator_id",
+          "label": "创作者id",
+          "type": "文本"
+        },
+        {
+          "name": "element_module",
+          "label": "元素模块",
+          "type": "文本"
+        },
+        {
+          "name": "element_tab",
+          "label": "元素tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_second_tab",
+          "label": "元素二级tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_third_tab",
+          "label": "元素三级tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_name",
+          "label": "元素名称",
+          "type": "文本"
+        },
+        {
+          "name": "element_id",
+          "label": "元素id",
+          "type": "文本"
+        },
+        {
+          "name": "element_type",
+          "label": "元素类型",
+          "type": "文本"
+        },
+        {
+          "name": "element_content",
+          "label": "元素内容",
+          "type": "文本"
+        },
+        {
+          "name": "duration",
+          "label": "时长_毫秒",
+          "type": "数值"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        },
+        {
+          "name": "element_pos",
+          "label": "元素位置",
+          "type": "文本"
+        },
+        {
+          "name": "skill_id",
+          "label": "技能id",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_order_server": {
+      "display": "订单日志",
+      "attrs": [
+        {
+          "name": "order_id",
+          "label": "订单id",
+          "type": "文本"
+        },
+        {
+          "name": "order_create_at",
+          "label": "订单创建时间戳",
+          "type": "数值"
+        },
+        {
+          "name": "currency_code",
+          "label": "币种",
+          "type": "文本"
+        },
+        {
+          "name": "order_total_amount",
+          "label": "订单总金额",
+          "type": "数值"
+        },
+        {
+          "name": "order_discount_amount",
+          "label": "订单减免金额",
+          "type": "数值"
+        },
+        {
+          "name": "order_pay_amount",
+          "label": "订单实付金额",
+          "type": "数值"
+        },
+        {
+          "name": "order_pay_amount_usd",
+          "label": "订单实付金额美元",
+          "type": "数值"
+        },
+        {
+          "name": "refund_amount",
+          "label": "退款金额",
+          "type": "数值"
+        },
+        {
+          "name": "status",
+          "label": "状态",
+          "type": "文本"
+        },
+        {
+          "name": "product_id",
+          "label": "商品id",
+          "type": "文本"
+        },
+        {
+          "name": "product_type",
+          "label": "商品类型",
+          "type": "文本"
+        },
+        {
+          "name": "product_content",
+          "label": "商品内容",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_token_consume_server": {
+      "display": "token消耗",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "product_id",
+          "label": "商品id",
+          "type": "文本"
+        },
+        {
+          "name": "post_id",
+          "label": "帖子id",
+          "type": "文本"
+        },
+        {
+          "name": "video_id",
+          "label": "视频id",
+          "type": "文本"
+        },
+        {
+          "name": "game_id",
+          "label": "游戏id",
+          "type": "文本"
+        },
+        {
+          "name": "work_id",
+          "label": "作品id",
+          "type": "文本"
+        },
+        {
+          "name": "agent_id",
+          "label": "agentid",
+          "type": "文本"
+        },
+        {
+          "name": "item_id",
+          "label": "物品id",
+          "type": "文本"
+        },
+        {
+          "name": "author_id",
+          "label": "作者id",
+          "type": "文本"
+        },
+        {
+          "name": "task_id",
+          "label": "任务id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "creator_id",
+          "label": "创作者id",
+          "type": "文本"
+        },
+        {
+          "name": "window_id",
+          "label": "窗口id",
+          "type": "文本"
+        },
+        {
+          "name": "session_id",
+          "label": "会话id",
+          "type": "文本"
+        },
+        {
+          "name": "prompt_token",
+          "label": "输入token",
+          "type": "数值"
+        },
+        {
+          "name": "completion_token",
+          "label": "输出token",
+          "type": "数值"
+        },
+        {
+          "name": "consume_token",
+          "label": "消耗token",
+          "type": "数值"
+        },
+        {
+          "name": "token_balance",
+          "label": "token存量",
+          "type": "数值"
+        },
+        {
+          "name": "consume_credit",
+          "label": "消耗积分",
+          "type": "数值"
+        },
+        {
+          "name": "credit_balance",
+          "label": "积分存量",
+          "type": "数值"
+        },
+        {
+          "name": "duration",
+          "label": "时长_毫秒",
+          "type": "数值"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        },
+        {
+          "name": "request_id",
+          "label": "请求id",
+          "type": "文本"
+        },
+        {
+          "name": "apikey",
+          "label": "apikey",
+          "type": "文本"
+        },
+        {
+          "name": "latency",
+          "label": "消耗时间秒",
+          "type": "数值"
+        },
+        {
+          "name": "cost",
+          "label": "成本",
+          "type": "数值"
+        }
+      ]
+    },
+    "log_register_server": {
+      "display": "注册",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "register_method",
+          "label": "注册方式",
+          "type": "文本"
+        },
+        {
+          "name": "register_channel",
+          "label": "注册渠道",
+          "type": "文本"
+        },
+        {
+          "name": "status",
+          "label": "状态",
+          "type": "文本"
+        },
+        {
+          "name": "error_message",
+          "label": "错误信息",
+          "type": "文本"
+        },
+        {
+          "name": "expose_method",
+          "label": "曝光方式",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_login_server": {
+      "display": "登录",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "login_method",
+          "label": "登录方式",
+          "type": "文本"
+        },
+        {
+          "name": "login_channel",
+          "label": "登录渠道",
+          "type": "文本"
+        },
+        {
+          "name": "status",
+          "label": "状态",
+          "type": "文本"
+        },
+        {
+          "name": "error_message",
+          "label": "错误信息",
+          "type": "文本"
+        },
+        {
+          "name": "expose_method",
+          "label": "曝光方式",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_page_expose_client": {
+      "display": "页面曝光",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "product_id",
+          "label": "商品id",
+          "type": "文本"
+        },
+        {
+          "name": "post_id",
+          "label": "帖子id",
+          "type": "文本"
+        },
+        {
+          "name": "video_id",
+          "label": "视频id",
+          "type": "文本"
+        },
+        {
+          "name": "game_id",
+          "label": "游戏id",
+          "type": "文本"
+        },
+        {
+          "name": "work_id",
+          "label": "作品id",
+          "type": "文本"
+        },
+        {
+          "name": "agent_id",
+          "label": "agentid",
+          "type": "文本"
+        },
+        {
+          "name": "item_id",
+          "label": "物品id",
+          "type": "文本"
+        },
+        {
+          "name": "author_id",
+          "label": "作者id",
+          "type": "文本"
+        },
+        {
+          "name": "task_id",
+          "label": "任务id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "creator_id",
+          "label": "创作者id",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        },
+        {
+          "name": "skill_id",
+          "label": "技能id",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_page_leave_client": {
+      "display": "页面离开",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "product_id",
+          "label": "商品id",
+          "type": "文本"
+        },
+        {
+          "name": "post_id",
+          "label": "帖子id",
+          "type": "文本"
+        },
+        {
+          "name": "video_id",
+          "label": "视频id",
+          "type": "文本"
+        },
+        {
+          "name": "game_id",
+          "label": "游戏id",
+          "type": "文本"
+        },
+        {
+          "name": "work_id",
+          "label": "作品id",
+          "type": "文本"
+        },
+        {
+          "name": "agent_id",
+          "label": "agentid",
+          "type": "文本"
+        },
+        {
+          "name": "item_id",
+          "label": "物品id",
+          "type": "文本"
+        },
+        {
+          "name": "author_id",
+          "label": "作者id",
+          "type": "文本"
+        },
+        {
+          "name": "task_id",
+          "label": "任务id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "creator_id",
+          "label": "创作者id",
+          "type": "文本"
+        },
+        {
+          "name": "duration",
+          "label": "时长_毫秒",
+          "type": "数值"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        },
+        {
+          "name": "skill_id",
+          "label": "技能id",
+          "type": "文本"
+        }
+      ]
+    },
+    "log_click_client": {
+      "display": "点击",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "product_id",
+          "label": "商品id",
+          "type": "文本"
+        },
+        {
+          "name": "post_id",
+          "label": "帖子id",
+          "type": "文本"
+        },
+        {
+          "name": "video_id",
+          "label": "视频id",
+          "type": "文本"
+        },
+        {
+          "name": "game_id",
+          "label": "游戏id",
+          "type": "文本"
+        },
+        {
+          "name": "work_id",
+          "label": "作品id",
+          "type": "文本"
+        },
+        {
+          "name": "agent_id",
+          "label": "agentid",
+          "type": "文本"
+        },
+        {
+          "name": "item_id",
+          "label": "物品id",
+          "type": "文本"
+        },
+        {
+          "name": "author_id",
+          "label": "作者id",
+          "type": "文本"
+        },
+        {
+          "name": "task_id",
+          "label": "任务id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "creator_id",
+          "label": "创作者id",
+          "type": "文本"
+        },
+        {
+          "name": "element_module",
+          "label": "元素模块",
+          "type": "文本"
+        },
+        {
+          "name": "element_tab",
+          "label": "元素tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_second_tab",
+          "label": "元素二级tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_third_tab",
+          "label": "元素三级tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_name",
+          "label": "元素名称",
+          "type": "文本"
+        },
+        {
+          "name": "element_id",
+          "label": "元素id",
+          "type": "文本"
+        },
+        {
+          "name": "element_type",
+          "label": "元素类型",
+          "type": "文本"
+        },
+        {
+          "name": "element_content",
+          "label": "元素内容",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        },
+        {
+          "name": "element_pos",
+          "label": "元素位置",
+          "type": "文本"
+        },
+        {
+          "name": "skill_id",
+          "label": "技能id",
+          "type": "文本"
+        },
+        {
+          "name": "comment_id",
+          "label": "评论id",
+          "type": "文本",
+          "extended": true
+        }
+      ]
+    },
+    "log_element_expose_client": {
+      "display": "元素曝光",
+      "attrs": [
+        {
+          "name": "current_page_name",
+          "label": "当前页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_id",
+          "label": "当前页面id",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_name",
+          "label": "前一页面名称",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_id",
+          "label": "前一页面id",
+          "type": "文本"
+        },
+        {
+          "name": "product_id",
+          "label": "商品id",
+          "type": "文本"
+        },
+        {
+          "name": "post_id",
+          "label": "帖子id",
+          "type": "文本"
+        },
+        {
+          "name": "video_id",
+          "label": "视频id",
+          "type": "文本"
+        },
+        {
+          "name": "game_id",
+          "label": "游戏id",
+          "type": "文本"
+        },
+        {
+          "name": "work_id",
+          "label": "作品id",
+          "type": "文本"
+        },
+        {
+          "name": "agent_id",
+          "label": "agentid",
+          "type": "文本"
+        },
+        {
+          "name": "item_id",
+          "label": "物品id",
+          "type": "文本"
+        },
+        {
+          "name": "author_id",
+          "label": "作者id",
+          "type": "文本"
+        },
+        {
+          "name": "task_id",
+          "label": "任务id",
+          "type": "文本"
+        },
+        {
+          "name": "model_id",
+          "label": "模型id",
+          "type": "文本"
+        },
+        {
+          "name": "creator_id",
+          "label": "创作者id",
+          "type": "文本"
+        },
+        {
+          "name": "element_module",
+          "label": "元素模块",
+          "type": "文本"
+        },
+        {
+          "name": "element_tab",
+          "label": "元素tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_second_tab",
+          "label": "元素二级tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_third_tab",
+          "label": "元素三级tab",
+          "type": "文本"
+        },
+        {
+          "name": "element_name",
+          "label": "元素名称",
+          "type": "文本"
+        },
+        {
+          "name": "element_id",
+          "label": "元素id",
+          "type": "文本"
+        },
+        {
+          "name": "element_type",
+          "label": "元素类型",
+          "type": "文本"
+        },
+        {
+          "name": "element_content",
+          "label": "元素内容",
+          "type": "文本"
+        },
+        {
+          "name": "current_page_url",
+          "label": "当前页面url",
+          "type": "文本"
+        },
+        {
+          "name": "ref_page_url",
+          "label": "前页url",
+          "type": "文本"
+        },
+        {
+          "name": "element_pos",
+          "label": "元素位置",
+          "type": "文本"
+        },
+        {
+          "name": "skill_id",
+          "label": "技能id",
+          "type": "文本"
+        },
+        {
+          "name": "comment_id",
+          "label": "评论id",
+          "type": "文本",
+          "extended": true
+        }
+      ]
+    }
+  },
+  "pages": {
+    "_global": [
+      {
+        "info": "注册成功",
+        "event": "log_register_server",
+        "timing": "成功注册时",
+        "params": "register_channel={注册渠道}  # 比如 google、facebood、github、discord等等",
+        "side": "后端上报"
+      },
+      {
+        "info": "注册失败-后端",
+        "event": "log_register_failed_server",
+        "timing": "注册失败时",
+        "params": "register_channel={注册渠道}  # 比如 google、facebood、github、discord等等\nerror_message={错误原因}",
+        "side": "后端上报"
+      },
+      {
+        "info": "注册失败-前端",
+        "event": "log_register_failed_client",
+        "timing": "注册失败时",
+        "params": "register_channel={注册渠道}  # 比如 google、facebood、github、discord等等\nerror_message={错误原因}",
+        "side": "前端上报"
+      },
+      {
+        "info": "登录成功",
+        "event": "log_login_server",
+        "timing": "成功登录时",
+        "params": "login_channel={登录渠道}  # 比如 google、facebood、github、discord等等",
+        "side": "后端上报"
+      },
+      {
+        "info": "登录失败-后端",
+        "event": "log_login_failed_server",
+        "timing": "登录失败时",
+        "params": "login_channel={登录渠道}  # 比如 google、facebood、github、discord等等\nerror_message={错误原因}",
+        "side": "后端上报"
+      },
+      {
+        "info": "登录失败-前端",
+        "event": "log_login_failed_client",
+        "timing": "登录失败时",
+        "params": "login_channel={登录渠道}  # 比如 google、facebood、github、discord等等\nerror_message={错误原因}",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey状态变动",
+        "event": "log_apikey_server",
+        "timing": "apikey状态变动时",
+        "params": "apikey={apikey}  # 信息比较敏感的话，可以给id或者加密的\nchange_type={本次的变动类型} create(新增)、disable(停止使用)、delete(删除)",
+        "side": "后端上报"
+      },
+      {
+        "info": "调用模型api",
+        "event": "log_api_call_server",
+        "timing": "每次调用api时",
+        "params": "request_id={请求id} \nmodel_id={本次使用的模型标记} # 比如gpt5-5、deepseek-v4-flash等\napikey={本次使用的apikey}  # 信息比较敏感的话，可以给id或者加密的",
+        "side": "后端上报"
+      },
+      {
+        "info": "token消耗日志",
+        "event": "log_token_consume_server",
+        "timing": "成功消耗token时",
+        "params": "request_id={请求id} \nmodel_id={本次使用的模型标记} # 比如gpt5-5、deepseek-v4-flash等\napikey={本次使用的apikey}  # 信息比较敏感的话，可以给id或者加密的\nprompt_token={输入token}\ncompletion_token={输出token}\nlatency={延迟时间，秒}\ncost={成本}",
+        "side": "后端上报"
+      },
+      {
+        "info": "模型api调用失败",
+        "event": "log_api_call_failed_server",
+        "timing": "api调用失败时上报",
+        "params": "request_id={请求id} \nmodel_id={本次使用的模型标记} # 比如gpt5-5、deepseek-v4-flash等\napikey={本次使用的apikey}  # 信息比较敏感的话，可以给id或者加密的\nerror_message={错误原因}\n",
+        "side": "后端上报"
+      },
+      {
+        "info": "积分（credits）变动",
+        "event": "log_credits_server",
+        "timing": "积分变动时",
+        "params": "nums={变化量} # 获得积分是正数，消耗积分是负数。\nbalance={存量} # 变动后的积分存量\naction={变动原因} # 因为什么导致的积分变动，尤其标记：创建账号获取、尝试第一个模型、尝试第一次api调用等运营关注的，总之研发需要标记带是什么导致了积分的变动。研发可以自己维护一个action表，比如10001代表创建账号获取积分 10002代表在首次在palygroupd发起对话获得积分等等",
+        "side": "后端上报"
+      },
+      {
+        "info": "重要接口查询\n# 本次只记录：\n1. pricing涉及展示价格的接口\n2. usage涉及展示数据的接口\n3. Request Logs中展示数据的接口",
+        "event": "lop_interface_client",
+        "timing": "每次前端调接口\n\n",
+        "params": "request_id={请求id} \napi_url={调用的接口} \n# 本次只记录：\n1. pricing涉及展示价格的接口\n2. usage涉及展示数据的接口\n3. Request Logs中展示数据的接口\n\nresponse_time={响应时间,毫秒}\nstatus={状态}  # yes or no,是否正常响应\nerror_message={错误原因} # 如果报错，报错的原因",
+        "side": "前端上报"
+      }
+    ],
+    "public_home_page": [
+      {
+        "info": "公共首页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "current_page_name = public_home_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-横幅点击",
+        "event": "log_click_client",
+        "timing": "点击横幅时",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name=top_banner\nelement_content = get_free_credits\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击什么报什么}     # Models、Pricing、Docs 、switch language、Earn More Credits、Sign in等",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-中间内容点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_name{点击的元素名称} # 比如 Get API Key、 View Docs、 View all models等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-底部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nelement_pos=bottom_nav\nelement_name{点击的元素名称} # 比如 ABOUT、Docs等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-模型点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nelement_module=model_click\nmodel_id={点击的模型id} # 比如 Claude Opus 4.7、GPT-5.5 等等 ",
+        "side": "前端上报"
+      },
+      {
+        "info": "公共首页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = public_home_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "login_page": [
+      {
+        "info": "登录页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "\ncurrent_page_name = login_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "登录页-点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = login_page\nref_page_url={前页的url}\nelement_name={点击的地方} \n# 比如Enter your emai、Enter your password、Sign in、Sign up等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "登录页-注册窗口曝光",
+        "event": "log_element_expose_client",
+        "timing": "注册窗口曝光时",
+        "params": "\ncurrent_page_name = login_page\nref_page_url={前页的url}\nelement_module=create_your_account\nelement_name=create_your_account_expose",
+        "side": "前端上报"
+      },
+      {
+        "info": "登录页-注册窗口点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = login_page\nref_page_url={前页的url}\nelement_module=create_your_account\nelement_name={点击什么报什么} # 比如send code create account and claim credits等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "登录页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = login_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "home_page": [
+      {
+        "info": "首页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-创建账号奖励积分弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "弹窗曝光时",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_module=create_account_reward\nelement_name=create_account_reward_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-创建账号奖励积分弹窗点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_module=create_account_reward\nelement_name={点击什么报什么} # 比如：start exploring、earn more credits、close等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-中间内容点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_name={点击的地方} # Models 、Playground、Pricing、View all等",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-模型点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nelement_module=model_click\nmodel_id={点击的模型id} # 比如 Claude Opus 4.7、GPT-5.5 等等 ",
+        "side": "前端上报"
+      },
+      {
+        "info": "首页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = home_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "model_page": [
+      {
+        "info": "模型页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-中间类别点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_module=category\nelement_name={点击的元素名称}\n# 比如：\nFeatured、LLM、Image、Video、Audio、3D",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-搜索输入框点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_module=search\nelement_name=input",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-搜索确认点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_module=search_confirm\nelement_content={搜索的内容}",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-子侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_pos=sub_left_nav\nelement_module={类别}#   Featured、LLM、Image、Video、Audio、3D\nelement_name={点击的元素名称} # All providers、3D等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-模型列表曝光",
+        "event": "log_element_expose_client",
+        "timing": "模型列表曝光时上报\n可视区域内曝光的模型就报进去",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_module=model_expose\nelement_content={曝光的模型id}，字符串\n\nelement_content形如\n\n[\n    {model_id:deepseek -v4-flash},\n    {model_id: mimo v2.5},\n    {model_id: gpt-5.5},\n]\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页-模型点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nelement_module=model_click\nmodel_id={点击的模型id} # 比如 Claude Opus 4.7、GPT-5.5 等等 ",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型页离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = model_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "playground_page": [
+      {
+        "info": "playground页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "current_page_name = playground_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-聊天界面点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=chat\nelement_name={点击的地方} # input、send、switch model等",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-聊天界面点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=chat\nelement_name={点击的地方} # input、send、switch model、api等",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-聊天页-api示例窗口曝光",
+        "event": "log_element_expose_client",
+        "timing": "窗口曝光时",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=chat\nelement_module=api_example\nelement_name=api_example_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-聊天页-api示例窗口点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=chat\nelement_module=api_example\nelement_name={点击什么报什么} # 比如 create api key、copy、cancel等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-聊天页-余额不足窗口曝光",
+        "event": "log_element_expose_client",
+        "timing": "窗口曝光时",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=chat\nelement_module=low_balance\nelement_name=low_balance_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-聊天页-余额不足弹窗点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nelement_pos=chat\nelement_module=low_balance\nelement_name={点击什么报什么} # 比如 去充值、 add credits等等，产品最终实际为准。\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "playground页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = playground_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "pricing_page": [
+      {
+        "info": "价格页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-中间类别点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_module=category\nelement_name={点击的元素名称}\n# 比如：\nFeatured、LLM、Image、Video、Audio、3D",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-搜索输入框点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_module=search\nelement_name=input",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-搜索确认点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_pos=middle_content\nelement_module=search_confirm\nelement_content={搜索的内容}",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-模型点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_module=model_click\nmodel_id={点击的模型id} # 比如 Claude Opus 4.7、GPT-5.5 等等 ",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页-价格点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nelement_module=price_click\nmodel_id={点击什么报什么}  # 比如input price等",
+        "side": "前端上报"
+      },
+      {
+        "info": "价格页离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = pricing_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "credits_page": [
+      {
+        "info": "积分页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "current_page_name = credits_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-界面点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_name={点击的地方} # # Earn More Credits、Join Paid Waitlist、刷新、选择时间、Filter 等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-加入付费候补名单弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "加入付费候补名单弹窗曝光时",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_module=join_paid_waitlist\nelement_name=join_paid_waitlist_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-加入付费候补名单弹窗点击",
+        "event": "log_click_client",
+        "timing": "加入付费候补名单弹窗点击时",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_module=join_paid_waitlist\nelement_name={点击的地方} # Join Waitlist、close等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-加入付费候补名单成功提示曝光",
+        "event": "log_element_expose_client",
+        "timing": "加入付费候补名单成功提示曝光",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nelement_module=join_paid_waitlist\nelement_name=join_paid_waitlist_success\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "积分页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = credits_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "usage_page": [
+      {
+        "info": "用量页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "current_page_name = usage_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "用量页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = usage_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "用量页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = usage_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "用量页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = usage_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "用量页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = usage_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "用量页-界面点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = usage_page\nref_page_url={前页的url}\nelement_name={点击的地方} # # 刷新、选择时间、Filter 等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "用量页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = usage_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "account_page": [
+      {
+        "info": "账户页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "current_page_name = account_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "账户页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = account_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "账户页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = account_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "账户页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = account_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "账户页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = account_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "账户页-界面点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = account_page\nref_page_url={前页的url}\nelement_name={点击的地方} # # 刷新、选择时间、Filter 等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "账户页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = account_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "apikey_page": [
+      {
+        "info": "apikey页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "current_page_name = apikey_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-界面点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_name={点击的地方} # create api key、刷新、选择时间、Filter 等等\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-创建apikey窗口曝光",
+        "event": "log_element_expose_client",
+        "timing": "窗口曝光时",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_module=create_api_key\nelement_name=create_api_key_xepose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-创建apikey窗口点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_module=create_api_key\nelement_name={点击什么报什么} # cancel、create等\nelement_content={提交的apikey的name}\neleemnt_type={标记是否成功创建}  # 1成功创建 0 未成功创建\nerror_message={未成功创建时的原因}",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-创建apikey成功窗口曝光",
+        "event": "log_element_expose_client",
+        "timing": "窗口曝光时",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nelement_module=create_api_key_success\nelement_name=create_api_key_success_xepose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "apikey页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = apikey_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "request_log_page": [
+      {
+        "info": "请求日志页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "current_page_name = request_log_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "请求日志页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = request_log_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "请求日志页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = request_log_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "请求日志页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = request_log_page\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "请求日志页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = request_log_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "请求日志页-界面点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = request_log_page\nref_page_url={前页的url}\nelement_name={点击的地方} # # 刷新、选择时间、Filter 等等",
+        "side": "前端上报"
+      },
+      {
+        "info": "请求日志页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = request_log_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "doc_page": [
+      {
+        "info": "文档页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "\ncurrent_page_name = doc_page\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "文档页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = doc_page\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={元素名称}  # Home、Auto、Dark、Light、Englisgh、简体中文",
+        "side": "前端上报"
+      },
+      {
+        "info": "文档页-左部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = doc_page\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击什么报什么}  ",
+        "side": "前端上报"
+      },
+      {
+        "info": "文档页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = doc_page\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ],
+    "model_detail_page": [
+      {
+        "info": "模型详情页-曝光",
+        "event": "log_page_expose_client",
+        "timing": "页面曝光时上报",
+        "params": "\ncurrent_page_name = model_detail_page\nmodel_id={模型id}\nref_page_url={前页的url}",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型详情页-顶部导航点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_detail_page\nmodel_id={模型id}\nref_page_url={前页的url}\nelement_pos=top_nav\nelement_name={点击的地方} # Free credits、account、avatar、API  keys、sign out等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型详情页-奖励任务弹窗曝光",
+        "event": "log_element_expose_client",
+        "timing": "奖励任务弹窗曝光时",
+        "params": "\ncurrent_page_name = model_detail_page\nmodel_id={模型id}\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name=reward_task_expose\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型详情页-奖励任务弹窗任务点击",
+        "event": "log_click_client",
+        "timing": "奖励任务弹窗点击任务时",
+        "params": "\ncurrent_page_name = model_detail_page\nmodel_id={模型id}\nref_page_url={前页的url}\nelement_module=reward_task\nelement_name={点击什么报什么} # 比如create account、open playground、crreate api key等等\n\n",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型详情页-侧边栏点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_detail_page\nmodel_id={模型id}\nref_page_url={前页的url}\nelement_pos=left_nav\nelement_name={点击的地方} # Home、Models 、Docs等的",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型详情页-点击",
+        "event": "log_click_client",
+        "timing": "点击时上报",
+        "params": "\ncurrent_page_name = model_detail_page\nmodel_id={模型id}\nref_page_url={前页的url}\nelement_name={点击啥上报啥}  # try model、over view、playground、api、create api key、copy、input、send等",
+        "side": "前端上报"
+      },
+      {
+        "info": "模型详情页-离开",
+        "event": "log_page_leave_client",
+        "timing": "页面离开时上报",
+        "params": "\ncurrent_page_name = model_detail_page\nmodel_id={模型id}\nref_page_url={前页的url}\nduration={页面停留时长_毫秒}",
+        "side": "前端上报"
+      }
+    ]
+  }
+}

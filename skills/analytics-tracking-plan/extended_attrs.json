@@ -1,0 +1,17 @@
+{
+  "_comment": "产品扩展参数：不在 Excel 原规范中，但符合实际产品语义时可使用。须登记于此并同步到 reference_data.json；HTML 输出时扩展参数名红色加粗（param-ext）。",
+  "log_click_client": [
+    {
+      "name": "comment_id",
+      "label": "评论id",
+      "type": "文本"
+    }
+  ],
+  "log_element_expose_client": [
+    {
+      "name": "comment_id",
+      "label": "评论id",
+      "type": "文本"
+    }
+  ]
+}

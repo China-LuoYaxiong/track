@@ -1,0 +1,8 @@
+# 系统与本地缓存
+.DS_Store
+Thumbs.db
+.workbuddy/
+
+# Python 缓存
+__pycache__/
+*.pyc

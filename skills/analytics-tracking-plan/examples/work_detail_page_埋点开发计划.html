@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>work_detail_page 埋点清单</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f5f6f8;
+      color: #1f2329;
+      line-height: 1.5;
+    }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .copy-btn {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 16px;
+      border: 1px solid #3370ff;
+      border-radius: 6px;
+      background: #3370ff;
+      color: #fff;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: #245bdb; border-color: #245bdb; }
+    .copy-btn:active { background: #1e4fc4; }
+    .copy-status {
+      font-size: 13px;
+      color: #2ea121;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      background: #fff;
+      border: 1px solid #dee0e3;
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid #dee0e3;
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #f2f3f5;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td:nth-child(1) { min-width: 160px; }
+    td:nth-child(2) { min-width: 72px; text-align: center; }
+    td:nth-child(3) { min-width: 110px; }
+    td:nth-child(4) { min-width: 180px; }
+    td:nth-child(5) { min-width: 140px; }
+    td:nth-child(6) { min-width: 420px; }
+    td:nth-child(7) { min-width: 80px; white-space: nowrap; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      background: #f2f3f5;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .params {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .comment { color: #8f959e; }
+    .param-ext {
+      color: #d83931;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>埋点清单</h2>
+    <div class="toolbar">
+      <button type="button" class="copy-btn" id="copy-table-btn">一键复制数据行</button>
+      <span class="copy-status" id="copy-status"></span>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="tracking-table">
+      <thead>
+        <tr>
+          <th>埋点信息</th>
+          <th>页面截图</th>
+          <th>页面标识</th>
+          <th>埋点事件</th>
+          <th>上报时机</th>
+          <th>上报参数详情</th>
+          <th>前后端埋点</th>
+        </tr>
+      </thead>
+<tbody>
+        <tr>
+          <td>作品详情页-曝光</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_page_expose_client</code></td>
+          <td>页面曝光时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-离开</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_page_leave_client</code></td>
+          <td>页面离开时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+duration={页面停留时长_毫秒}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-作者区点击</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击作者头像或昵称时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_author
+element_name={点击什么报什么} <span class="comment"># author_avatar、author_name</span>
+author_id={作者id}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-关注点击</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击「关注」按钮时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_author
+element_name=follow
+author_id={作者id}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-互动栏点击</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击互动统计栏图标时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_action
+element_name={点击什么报什么} <span class="comment"># like（点赞）、bookmark（收藏）、share（分享）</span>
+element_content={可选补充} <span class="comment"># like/bookmark 可传操作后状态 on/off</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-改编点击</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击「改编」按钮时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_action
+element_name=remix
+element_content={作品标题}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-评论区曝光</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_element_expose_client</code></td>
+          <td>评论区进入可视区时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_comment
+element_name=comment_section_expose
+element_content={评论总数}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-评论点赞点击</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击某条评论的点赞图标时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_comment
+element_name=comment_like
+<span class="param-ext">comment_id</span>={评论id}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-评论回复点击</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击某条评论的「回复」时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_comment
+element_name=comment_reply
+<span class="param-ext">comment_id</span>={评论id}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-评论输入聚焦</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击或聚焦评论输入框时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_comment
+element_name=comment_input_focus</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>作品详情页-评论提交</td>
+          <td>-</td>
+          <td><code>work_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击评论发送按钮时上报</td>
+          <td class="params">current_page_name = work_detail_page
+work_id={作品id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=work_comment
+element_name=comment_submit
+element_type={new/reply} <span class="comment"># new=新发评论，reply=回复评论</span>
+element_content={评论正文} <span class="comment"># 敏感或过长时可截断/hash，或只传长度</span>
+<span class="param-ext">comment_id</span>={被回复的评论id} <span class="comment"># element_type=reply 时传</span></td>
+          <td>前端上报</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <script>
+    (function () {
+      var table = document.getElementById('tracking-table');
+      var btn = document.getElementById('copy-table-btn');
+      var status = document.getElementById('copy-status');
+
+      function cellText(cell) {
+        return (cell.innerText || cell.textContent || '').replace(/\r\n/g, '\n').trim();
+      }
+
+      function escapeTsvField(value) {
+        var s = String(value);
+        if (/[\t\n\r"]/.test(s)) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      }
+
+      function tableToTsv() {
+        var rows = table.querySelectorAll('tbody tr');
+        var lines = [];
+        for (var i = 0; i < rows.length; i++) {
+          var cells = rows[i].querySelectorAll('td');
+          var parts = [];
+          for (var j = 0; j < cells.length; j++) {
+            parts.push(escapeTsvField(cellText(cells[j])));
+          }
+          lines.push(parts.join('\t'));
+        }
+        return lines.join('\n');
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function textToExcelCellHtml(text) {
+        var lines = String(text).split('\n');
+        if (lines.length <= 1) {
+          return escapeHtml(text);
+        }
+        return lines.map(function (line) {
+          return escapeHtml(line);
+        }).join('<br style="mso-data-placement:same-cell;">');
+      }
+
+      function prepareTableForExcelCopy() {
+        var tbody = table.querySelector('tbody');
+        var clone = document.createElement('table');
+        clone.setAttribute('border', '1');
+        clone.setAttribute('cellpadding', '4');
+        clone.setAttribute('cellspacing', '0');
+        clone.setAttribute('style', 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12pt;');
+        clone.appendChild(tbody.cloneNode(true));
+
+        var cells = clone.querySelectorAll('td');
+        for (var i = 0; i < cells.length; i++) {
+          var cell = cells[i];
+          var text = cellText(cell);
+          cell.innerHTML = textToExcelCellHtml(text);
+          cell.setAttribute(
+            'style',
+            'vertical-align:top;white-space:pre-wrap;mso-data-placement:same-cell;'
+          );
+        }
+        return clone;
+      }
+
+      function toCfHtml(tableHtml) {
+        var start = '<html><head><meta charset="utf-8"></head><body>\r\n<!--StartFragment-->';
+        var end = '<!--EndFragment-->\r\n</body></html>';
+        var fragment = start + tableHtml + end;
+        var template =
+          'Version:0.9\r\n' +
+          'StartHTML:0000000000\r\n' +
+          'EndHTML:0000000000\r\n' +
+          'StartFragment:0000000000\r\n' +
+          'EndFragment:0000000000\r\n';
+        var full = template + fragment;
+
+        function pad(n) {
+          var s = String(n);
+          while (s.length < 10) s = '0' + s;
+          return s;
+        }
+
+        var startHtml = template.length;
+        var startFragment = template.length + start.length;
+        var endFragment = startFragment + tableHtml.length;
+        var endHtml = full.length;
+
+        return full
+          .replace('StartHTML:0000000000', 'StartHTML:' + pad(startHtml))
+          .replace('EndHTML:0000000000', 'EndHTML:' + pad(endHtml))
+          .replace('StartFragment:0000000000', 'StartFragment:' + pad(startFragment))
+          .replace('EndFragment:0000000000', 'EndFragment:' + pad(endFragment));
+      }
+
+      function tableToHtmlDocument() {
+        var clone = prepareTableForExcelCopy();
+        return toCfHtml(clone.outerHTML);
+      }
+
+      function tableToPlainHtmlDocument() {
+        var clone = prepareTableForExcelCopy();
+        return (
+          '<html><head><meta charset="utf-8"></head><body>' +
+          clone.outerHTML +
+          '</body></html>'
+        );
+      }
+
+      function copyViaSelection(htmlDoc) {
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = htmlDoc;
+        wrapper.setAttribute('contenteditable', 'true');
+        wrapper.style.position = 'fixed';
+        wrapper.style.left = '-9999px';
+        wrapper.style.top = '0';
+        document.body.appendChild(wrapper);
+
+        var tableNode = wrapper.querySelector('table');
+        var range = document.createRange();
+        range.selectNodeContents(tableNode || wrapper);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        var ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } finally {
+          sel.removeAllRanges();
+          document.body.removeChild(wrapper);
+        }
+        return ok;
+      }
+
+      function showSuccess() {
+        status.textContent = '已复制，可直接粘贴到 Excel';
+        setTimeout(function () { status.textContent = ''; }, 2500);
+      }
+
+      function showError() {
+        status.textContent = '复制失败，请手动全选表格复制';
+        status.style.color = '#d83931';
+        setTimeout(function () {
+          status.textContent = '';
+          status.style.color = '#2ea121';
+        }, 3000);
+      }
+
+      btn.addEventListener('click', function () {
+        var htmlDoc = tableToHtmlDocument();
+        var plainHtmlDoc = tableToPlainHtmlDocument();
+        var tsv = tableToTsv();
+
+        function trySelectionCopy() {
+          if (copyViaSelection(plainHtmlDoc)) {
+            showSuccess();
+            return true;
+          }
+          return false;
+        }
+
+        if (navigator.clipboard && window.ClipboardItem) {
+          var htmlBlob = new Blob([htmlDoc], { type: 'text/html' });
+          var textBlob = new Blob([tsv], { type: 'text/plain' });
+          navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': htmlBlob,
+              'text/plain': textBlob
+            })
+          ]).then(showSuccess).catch(function () {
+            if (!trySelectionCopy()) {
+              if (navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(tsv).then(showSuccess).catch(showError);
+              } else {
+                showError();
+              }
+            }
+          });
+          return;
+        }
+
+        if (!trySelectionCopy()) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(tsv).then(showSuccess).catch(showError);
+          } else {
+            showError();
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
