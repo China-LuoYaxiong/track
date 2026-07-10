@@ -23,6 +23,33 @@ PRESET_FIELDS = ['st_pk_id', 'st_user_id', 'st_role_id', 'st_account_id',
                  'st_distinct_id', 'st_event_name', 'st_event_time', 'st_event_datetime',
                  'platform_type', 'adid']
 
+def get_skill_source_dir():
+    """skill 内置示例文件目录（禁止用于正式验证）。"""
+    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'source'))
+
+def is_skill_builtin_file(file_path):
+    """判断路径是否落在 skill/source/ 内置示例目录内。"""
+    abs_path = os.path.normpath(os.path.abspath(file_path))
+    source_dir = get_skill_source_dir()
+    try:
+        return os.path.commonpath([abs_path, source_dir]) == source_dir
+    except ValueError:
+        return False
+
+def assert_user_input_files(excel_file, csv_file):
+    """校验必须使用用户提供的输入文件，禁止 fallback 到 skill 内置示例。"""
+    for label, path in [('埋点方案 Excel', excel_file), ('测试数据 CSV', csv_file)]:
+        if not path or not str(path).strip():
+            print(f'错误：{label} 未指定。请使用用户 @ 提供的文件路径。')
+            sys.exit(1)
+        if not os.path.isfile(path):
+            print(f'错误：{label} 不存在: {path}')
+            sys.exit(1)
+        if is_skill_builtin_file(path):
+            print(f'错误：{label} 使用了 skill 内置示例文件，禁止用于验证: {os.path.abspath(path)}')
+            print('请改用用户 @ 提供的 xlsx 和 csv 文件。')
+            sys.exit(1)
+
 def event_time_value(record):
     """用于排序，数值越大越新。"""
     try:
@@ -380,15 +407,135 @@ def classify_results(results):
     has_stored = latest['st_status'] == '1'
     return latest, has_reported, has_stored
 
-def generate_html_report(all_results):
+def is_reported_and_stored(item):
+    """是否已上报且已入库。"""
+    return item['has_reported'] and item['has_stored']
+
+def is_reported_not_stored(item):
+    """是否已上报但未入库。"""
+    return item['has_reported'] and not item['has_stored']
+
+def is_not_reported(item):
+    """是否未上报。"""
+    return not item['has_reported']
+
+TAB_FILTERS = {
+    'all': lambda item: True,
+    'ok': is_reported_and_stored,
+    'reported_not_stored': is_reported_not_stored,
+    'not_reported': is_not_reported,
+}
+
+def render_report_table_rows(all_results, tab_filter='all'):
+    """生成报告表格行 HTML。tab_filter: all | ok | reported_not_stored | not_reported"""
+    match_fn = TAB_FILTERS.get(tab_filter, lambda item: True)
+    rows_html = ''
+    for item in all_results:
+        if not match_fn(item):
+            continue
+
+        has_reported = item['has_reported']
+        point = item['point']
+        latest = item['latest']
+        has_stored = item['has_stored']
+
+        success_case = None
+        error_or_warning = '无'
+        error_case = None
+
+        if latest:
+            error_or_warning = format_error_or_warning(latest)
+            if has_stored:
+                success_case = format_json_case(latest, point['定义参数'])
+            else:
+                error_case = format_json_case(latest)
+
+        success_text = format_case_json_text(success_case)
+        error_text = format_case_json_text(error_case) if error_case else '无'
+        page_id = point['页面标识'] if point['页面标识'] else '—'
+        spec_detail = point['上报参数详情']
+        if spec_detail.lower() == 'nan':
+            spec_detail = '—'
+
+        rows_html += f"""
+            <tr>
+                <td class="col-no">{point['序号']}</td>
+                <td class="col-name">{escape_html(point['埋点信息'])}</td>
+                <td class="col-spec">{escape_html(page_id)}</td>
+                <td class="col-event">{escape_html(point['埋点事件'])}</td>
+                <td class="col-param"><pre class="spec-detail">{escape_html(spec_detail)}</pre></td>
+                <td class="col-status"><span class="{'yes' if has_reported else 'no'}">{'✅ 是' if has_reported else '❌ 否'}</span></td>
+                <td class="col-status"><span class="{'yes' if has_stored else 'no'}">{'✅ 是' if has_stored else '❌ 否'}</span></td>
+                <td class="col-case">{render_case_box(success_text)}</td>
+                <td class="col-error">{render_error_box(error_or_warning)}</td>
+                <td class="col-case">{render_case_box(error_text)}</td>
+            </tr>"""
+    return rows_html
+
+def render_tab_panel(tab_id, rows_html, empty_message, active=False):
+    """生成单个 Tab 面板 HTML。"""
+    panel_cls = 'tab-panel active' if active else 'tab-panel'
+    if rows_html.strip():
+        return f"""
+        <div id="{tab_id}" class="{panel_cls}">
+        <div class="table-wrap">
+        <table>
+            {REPORT_TABLE_HEADER}
+            {rows_html}
+        </table>
+        </div>
+        </div>"""
+    return f"""
+        <div id="{tab_id}" class="{panel_cls}">
+        <div class="table-wrap">
+        <table>
+            {REPORT_TABLE_HEADER}
+        </table>
+        </div>
+        <div class="tab-empty">{empty_message}</div>
+        </div>"""
+
+REPORT_TABLE_HEADER = """
+            <colgroup>
+                <col style="width: 48px">
+                <col style="width: 130px">
+                <col style="width: 110px">
+                <col style="width: 128px">
+                <col style="width: 320px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+            </colgroup>
+            <tr>
+                <th class="col-no">序号</th>
+                <th class="col-name">埋点信息</th>
+                <th class="col-spec">页面标识</th>
+                <th class="col-event">埋点事件</th>
+                <th class="col-param">上报参数详情</th>
+                <th class="col-status">是否上报</th>
+                <th class="col-status">是否入库</th>
+                <th class="col-case">入库案例</th>
+                <th class="col-error">入库错误原因或警告</th>
+                <th class="col-case">错误案例</th>
+            </tr>"""
+
+def generate_html_report(all_results, input_meta=None):
     """
     生成HTML验证报告
+    input_meta: {'excel_file': ..., 'csv_file': ...} 写入报告页脚
     """
     # 统计
-    total_points = len(all_points)
-    reported_points = sum(1 for r in all_results if r['has_reported'])
-    stored_points = sum(1 for r in all_results if r['has_stored'])
-    not_reported_points = total_points - reported_points
+    total_points = len(all_results)
+    ok_points = sum(1 for r in all_results if is_reported_and_stored(r))
+    reported_not_stored_points = sum(1 for r in all_results if is_reported_not_stored(r))
+    not_reported_points = sum(1 for r in all_results if is_not_reported(r))
+
+    all_rows_html = render_report_table_rows(all_results, tab_filter='all')
+    ok_rows_html = render_report_table_rows(all_results, tab_filter='ok')
+    reported_not_stored_rows_html = render_report_table_rows(all_results, tab_filter='reported_not_stored')
+    not_reported_rows_html = render_report_table_rows(all_results, tab_filter='not_reported')
     
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -437,6 +584,27 @@ def generate_html_report(all_results):
         .footer {{ padding: 10px 20px; background: #f8f9fa; font-size: 11px; color: #6c757d; }}
         .summary {{ padding: 15px 20px; background: #e9ecef; }}
         .summary span {{ margin-right: 20px; }}
+        .tabs {{ display: flex; gap: 0; padding: 0 20px; background: #e9ecef; border-bottom: 1px solid #dee2e6; }}
+        .tab-btn {{
+            padding: 10px 18px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            color: #495057;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
+        }}
+        .tab-btn:hover {{ color: #007bff; }}
+        .tab-btn.active {{
+            color: #007bff;
+            font-weight: bold;
+            border-bottom-color: #007bff;
+            background: white;
+        }}
+        .tab-panel {{ display: none; }}
+        .tab-panel.active {{ display: block; }}
+        .tab-empty {{ padding: 40px 20px; text-align: center; color: #6c757d; font-size: 14px; }}
     </style>
 </head>
 <body>
@@ -444,80 +612,47 @@ def generate_html_report(all_results):
         <h1>埋点点位验证报告</h1>
         <div class="summary">
             <span>总点位数：{total_points}</span>
-            <span>已上报：{reported_points}</span>
-            <span>已入库：{stored_points}</span>
+            <span>已上报已入库：{ok_points}</span>
+            <span>已上报未入库：{reported_not_stored_points}</span>
             <span>未上报：{not_reported_points}</span>
         </div>
-        <div class="table-wrap">
-        <table>
-            <colgroup>
-                <col style="width: 48px">
-                <col style="width: 130px">
-                <col style="width: 110px">
-                <col style="width: 128px">
-                <col style="width: 320px">
-                <col style="width: 72px">
-                <col style="width: 72px">
-                <col style="width: 510px">
-                <col style="width: 510px">
-                <col style="width: 510px">
-            </colgroup>
-            <tr>
-                <th class="col-no">序号</th>
-                <th class="col-name">埋点信息</th>
-                <th class="col-spec">页面标识</th>
-                <th class="col-event">埋点事件</th>
-                <th class="col-param">上报参数详情</th>
-                <th class="col-status">是否上报</th>
-                <th class="col-status">是否入库</th>
-                <th class="col-case">入库案例</th>
-                <th class="col-error">入库错误原因或警告</th>
-                <th class="col-case">错误案例</th>
-            </tr>"""
+        <div class="tabs">
+            <button type="button" class="tab-btn active" data-tab="tab-all">全部 ({total_points})</button>
+            <button type="button" class="tab-btn" data-tab="tab-ok">已上报已入库 ({ok_points})</button>
+            <button type="button" class="tab-btn" data-tab="tab-reported-not-stored">已上报未入库 ({reported_not_stored_points})</button>
+            <button type="button" class="tab-btn" data-tab="tab-not-reported">未上报 ({not_reported_points})</button>
+        </div>"""
+
+    html += render_tab_panel('tab-all', all_rows_html, '暂无验证点位', active=True)
+    html += render_tab_panel('tab-ok', ok_rows_html, '暂无已上报且已入库的点位')
+    html += render_tab_panel('tab-reported-not-stored', reported_not_stored_rows_html, '暂无已上报未入库的点位')
+    html += render_tab_panel('tab-not-reported', not_reported_rows_html, '暂无未上报的点位')
     
-    for item in all_results:
-        point = item['point']
-        latest = item['latest']
-        has_reported = item['has_reported']
-        has_stored = item['has_stored']
+    footer_lines = [f"验证时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"]
+    if input_meta:
+        footer_lines.append(f"埋点方案：{escape_html(input_meta.get('excel_file', ''))}")
+        footer_lines.append(f"测试数据：{escape_html(input_meta.get('csv_file', ''))}")
+    footer_html = '<br>'.join(footer_lines)
 
-        success_case = None
-        error_or_warning = '无'
-        error_case = None
-
-        if latest:
-            error_or_warning = format_error_or_warning(latest)
-            if has_stored:
-                success_case = format_json_case(latest, point['定义参数'])
-            else:
-                error_case = format_json_case(latest)
-
-        success_text = format_case_json_text(success_case)
-        error_text = format_case_json_text(error_case) if error_case else '无'
-        page_id = point['页面标识'] if point['页面标识'] else '—'
-        spec_detail = point['上报参数详情']
-        if spec_detail.lower() == 'nan':
-            spec_detail = '—'
-
-        html += f"""
-            <tr>
-                <td class="col-no">{point['序号']}</td>
-                <td class="col-name">{escape_html(point['埋点信息'])}</td>
-                <td class="col-spec">{escape_html(page_id)}</td>
-                <td class="col-event">{escape_html(point['埋点事件'])}</td>
-                <td class="col-param"><pre class="spec-detail">{escape_html(spec_detail)}</pre></td>
-                <td class="col-status"><span class="{'yes' if has_reported else 'no'}">{'✅ 是' if has_reported else '❌ 否'}</span></td>
-                <td class="col-status"><span class="{'yes' if has_stored else 'no'}">{'✅ 是' if has_stored else '❌ 否'}</span></td>
-                <td class="col-case">{render_case_box(success_text)}</td>
-                <td class="col-error">{render_error_box(error_or_warning)}</td>
-                <td class="col-case">{render_case_box(error_text)}</td>
-            </tr>"""
-    
     html += f"""
-        </table>
-        </div>
-        <div class="footer">验证时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+        <div class="footer">{footer_html}</div>
     </div>
+    <script>
+    (function () {{
+        var buttons = document.querySelectorAll('.tab-btn');
+        var panels = document.querySelectorAll('.tab-panel');
+        buttons.forEach(function (btn) {{
+            btn.addEventListener('click', function () {{
+                var target = btn.getAttribute('data-tab');
+                buttons.forEach(function (b) {{ b.classList.remove('active'); }});
+                panels.forEach(function (p) {{ p.classList.remove('active'); }});
+                btn.classList.add('active');
+                var panel = document.getElementById(target);
+                if (panel) panel.classList.add('active');
+            }});
+        }});
+    }})();
+    </script>
 </body>
 </html>"""
     
@@ -537,13 +672,20 @@ def main():
     # 解析命令行参数
     if len(sys.argv) < 4:
         print("用法: python validate.py <excel_file> <csv_file> <序号范围> [output_file]")
-        print("示例: python validate.py 副本-【odirouter】埋点方案与开发计划.xlsx odirouter_test_data.csv 20-35")
+        print("说明: excel_file / csv_file 必须为用户 @ 提供的文件，禁止使用 skill/source/ 内置示例")
+        print("示例: python validate.py /path/to/【odirouter】埋点方案与开发计划.xlsx /path/to/odirouter_data.csv 1-175")
         sys.exit(1)
     
-    excel_file = sys.argv[1]
-    csv_file = sys.argv[2]
+    excel_file = os.path.abspath(sys.argv[1])
+    csv_file = os.path.abspath(sys.argv[2])
     seq_range = sys.argv[3]
     output_file = sys.argv[4] if len(sys.argv) > 4 else None
+
+    assert_user_input_files(excel_file, csv_file)
+    print('=== 本次验证使用的文件（用户提供）===')
+    print(f'埋点方案: {excel_file}')
+    print(f'测试数据: {csv_file}')
+    print('')
     
     # 解析序号范围
     target_numbers = parse_number_sequence(seq_range)
@@ -578,7 +720,10 @@ def main():
         print(f"序号{point['序号']}: {point['埋点信息']} - 候选{len(results)}条, 取最新({latest_dt}), 上报={'是' if has_reported else '否'}, 入库={'是' if has_stored else '否'}")
     
     # 生成HTML报告
-    html_content = generate_html_report(all_results)
+    html_content = generate_html_report(all_results, input_meta={
+        'excel_file': excel_file,
+        'csv_file': csv_file,
+    })
     
     # 输出文件
     if not output_file:

@@ -6,17 +6,33 @@
 
 验证埋点方案中指定序号点位的上报与入库状态，输出 HTML 验证报告。列宽规则：埋点事件 128px、上报参数详情 320px（×2.5）、案例/错误/警告列 510px 同宽。
 
-## 输入
+## 输入（必须使用用户提供的文件）
 
-- 埋点方案 Excel（如 `副本-【odirouter】埋点方案与开发计划.xlsx`）
-- 测试数据 CSV（如 `odirouter_test_data.csv`）
-- 序号范围（如 `20-35` 或 `20,25,30,35`）
+| 输入 | 要求 |
+|------|------|
+| 埋点方案 Excel | 用户 @ 提供的 xlsx，**绝对路径** |
+| 测试数据 CSV | 用户 @ 提供的 csv，**绝对路径** |
+| 序号范围 | 如 `20-35` 或 `1-175` |
 
-> **默认参考文件**：已在 `source/` 目录下提供 `副本-【odirouter】埋点方案与开发计划.xlsx` 和 `odirouter_test_data.csv` 作为标准输入参考。
+> **禁止**使用 `source/` 目录下的内置示例文件进行正式验证。  
+> 用户未提供路径时，应先询问，不得 fallback 到 skill 内置文件。
 
 ## 输出
 
 HTML 验证报告，包含：
+
+**汇总栏：** 总点位数、已上报已入库、已上报未入库、未上报（`总点位数 = 已上报已入库 + 已上报未入库 + 未上报`）
+
+**四个 Tab：**
+
+| Tab | 筛选 |
+|-----|------|
+| 全部 | 无筛选 |
+| 已上报已入库 | 上报 ✅ 且 入库 ✅ |
+| 已上报未入库 | 上报 ✅ 且 入库 ❌ |
+| 未上报 | 上报 ❌ |
+
+**表格列：**
 
 | 列 | 说明 |
 |----|------|
@@ -25,6 +41,8 @@ HTML 验证报告，包含：
 | 是否上报 / 是否入库 | 基于最新一条记录 |
 | 入库案例 / 错误案例 | JSON，510px 宽，`.scroll-box` 横纵滚动 |
 | 入库错误原因或警告 | 错误原因 / 警告分行，510px 宽（与案例列同宽） |
+
+报告页脚记录本次使用的埋点方案与测试数据路径。
 
 ### CSS 列宽变量
 
@@ -36,6 +54,7 @@ HTML 验证报告，包含：
 
 ### 报告布局
 
+- **Tab 切换**：「全部」「已上报已入库」「已上报未入库」「未上报」
 - **整表横向滚动**：`.table-wrap` 包裹；表格 `width: max-content` + `<colgroup>` 固定列宽，避免列重叠
 - **埋点信息换行**：`.col-name` 自动折行，避免单行过长
 - **埋点事件**：128px 宽，可自动换行
@@ -52,21 +71,27 @@ HTML 验证报告，包含：
 ## 使用方法
 
 ```bash
-python scripts/validate.py <excel_file> <csv_file> <序号范围> [output_file]
+python scripts/validate.py <用户xlsx绝对路径> <用户csv绝对路径> <序号范围> [output_file]
 ```
 
 ### 示例
 
 ```bash
+# 验证全量 1-175（使用用户 @ 提供的文件）
+python scripts/validate.py \
+  "/path/to/【odirouter】埋点方案与开发计划.xlsx" \
+  "/path/to/odirouter_data.csv" \
+  "1-175" \
+  "/path/to/tracking_report_all.html"
+
 # 验证序号 20-35
-python scripts/validate.py "副本-【odirouter】埋点方案与开发计划.xlsx" "odirouter_test_data.csv" "20-35"
-
-# 验证全量 1-175
-python scripts/validate.py "副本-【odirouter】埋点方案与开发计划.xlsx" "odirouter_test_data.csv" "1-175"
-
-# 指定输出文件
-python scripts/validate.py "副本-【odirouter】埋点方案与开发计划.xlsx" "odirouter_test_data.csv" "107-110" "tracking_report_107_110.html"
+python scripts/validate.py \
+  "/path/to/【odirouter】埋点方案与开发计划.xlsx" \
+  "/path/to/odirouter_data.csv" \
+  "20-35"
 ```
+
+误用 `source/` 内置文件时，脚本会报错并退出。
 
 ## 文件结构
 
@@ -76,21 +101,24 @@ tracking-validator/
 ├── README.md         # 本文件
 ├── reference.md      # 验证规则参考
 ├── 使用说明.md       # 用户使用指南
-├── source/           # 默认输入参考文件
+├── source/           # ⚠️ 仅格式参考样例，禁止用于正式验证
+│   ├── README.md
 │   ├── 副本-【odirouter】埋点方案与开发计划.xlsx
 │   └── odirouter_test_data.csv
 └── scripts/
-    └── validate.py   # 核心验证脚本
+    └── validate.py   # 核心验证脚本（含内置文件拦截）
 ```
 
 ## 验证规则摘要
 
-1. **候选匹配**：事件名 + 页面标识（空则跳过）+ 固定值参数
-2. **取最新一条**：按 `st_event_time` 降序，仅用最新记录判定
-3. **是否上报**：存在匹配记录
-4. **是否入库**：最新一条 `st_status=1`（多余参数仅警告，不阻断）
-5. **错误原因**：`st_error_info` + 缺失必填参数
-6. **警告**：方案未定义的多余参数
+1. **输入文件**：必须使用用户 @ 提供的 xlsx / csv
+2. **候选匹配**：事件名 + 页面标识（空则跳过）+ 固定值参数
+3. **取最新一条**：按 `st_event_time` 降序，仅用最新记录判定
+4. **是否上报**：存在匹配记录
+5. **是否入库**：最新一条 `st_status=1`（多余参数仅警告，不阻断）
+6. **Tab 划分**：已上报已入库 / 已上报未入库 / 未上报 三类互斥
+7. **错误原因**：`st_error_info` + 缺失必填参数
+8. **警告**：方案未定义的多余参数
 
 ## 依赖
 

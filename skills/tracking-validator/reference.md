@@ -1,5 +1,18 @@
 # 埋点验证参考文档
 
+## 输入文件规则（强制）
+
+| 规则 | 说明 |
+|------|------|
+| 必须使用 | 用户 @ 提供的埋点方案 **xlsx** 和测试数据 **csv** |
+| 禁止使用 | `tracking-validator/source/` 下任何内置示例文件 |
+| 路径缺失 | 先向用户确认，不得 fallback 到 skill 内置文件 |
+| 执行前 | 打印两个输入文件的绝对路径 |
+| 报告页脚 | 写入埋点方案与测试数据路径 |
+| 脚本拦截 | `validate.py` 检测到 `source/` 路径会报错退出 |
+
+`source/` 目录文件仅用于 Skill 开发时了解 Excel/CSV 列结构，**不能替代用户真实数据**。
+
 ## 验证规则
 
 ### 1. 上报验证
@@ -187,6 +200,28 @@ AND properties.element_module == 'search_confirm'
 
 ## HTML报告格式
 
+### 汇总栏
+
+| 指标 | 计算方式 |
+|------|----------|
+| 总点位数 | `len(all_results)` |
+| 已上报已入库 | `is_reported_and_stored(item)` 为真的点位数 |
+| 已上报未入库 | `is_reported_not_stored(item)` 为真的点位数 |
+| 未上报 | `is_not_reported(item)` 为真的点位数 |
+
+恒等式：`总点位数 = 已上报已入库 + 已上报未入库 + 未上报`
+
+### Tab 切换
+
+| Tab | DOM id | 筛选规则 | 为空时提示 |
+|-----|--------|----------|------------|
+| 全部 | `tab-all` | 无筛选 | 暂无验证点位 |
+| 已上报已入库 | `tab-ok` | `has_reported=True` **且** `has_stored=True` | 暂无已上报且已入库的点位 |
+| 已上报未入库 | `tab-reported-not-stored` | `has_reported=True` **且** `has_stored=False` | 暂无已上报未入库的点位 |
+| 未上报 | `tab-not-reported` | `has_reported=False` | 暂无未上报的点位 |
+
+汇总统计与各 Tab 括号内计数一致。
+
 ### CSS 列宽变量
 
 | 变量 | 值 | 适用列 |
@@ -263,6 +298,11 @@ AND properties.element_module == 'search_confirm'
 
 | 函数 | 用途 |
 |------|------|
+| `is_reported_and_stored(item)` | 判定点位是否已上报且已入库 |
+| `is_reported_not_stored(item)` | 判定点位是否已上报但未入库 |
+| `is_not_reported(item)` | 判定点位是否未上报 |
+| `render_report_table_rows(all_results, tab_filter)` | 生成表格行；`tab_filter` 取值 `all` / `ok` / `reported_not_stored` / `not_reported` |
+| `render_tab_panel(tab_id, rows_html, empty_message, active)` | 生成单个 Tab 面板 HTML |
 | `render_case_box(text)` | 入库案例 / 错误案例：`.col-case` + `.scroll-box.case-box`（510px 宽，180px 高，横纵滚动） |
 | `render_error_box(text)` | 入库错误原因或警告：`.col-error` + `.scroll-box.error-box`（510px 宽，120px 高，横纵滚动） |
 | `format_case_json_text(case)` | 案例 JSON 每参数单行格式化 |
