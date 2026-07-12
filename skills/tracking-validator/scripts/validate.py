@@ -18,8 +18,23 @@ from datetime import datetime
 # 系统预置参数（不检查）
 SYSTEM_PARAMS = ['extend', 'adid', 'current_page_url', 'platform_type']
 
+# 「上报参数详情」注释中表示可选参数的短语（可出现在描述性注释任意位置）
+OPTIONAL_PARAM_COMMENT_PHRASES = [
+    r'有就报[，,]?没有就算了',
+    r'没有就算了',
+    r'非必填',
+]
+
+# 注释整体或句首的独立「可选 / 选填」标注（避免误匹配「可选场景」「可选择」等描述）
+OPTIONAL_PARAM_COMMENT_STANDALONE = [
+    r'^可选$',
+    r'^选填$',
+    r'^可选[，,；;]',
+    r'^选填[，,；;]',
+]
+
 # 预置属性和公共属性字段
-PRESET_FIELDS = ['st_pk_id', 'st_user_id', 'st_role_id', 'st_account_id', 
+PRESET_FIELDS = ['st_pk_id', 'st_status', 'st_user_id', 'st_role_id', 'st_account_id', 
                  'st_distinct_id', 'st_event_name', 'st_event_time', 'st_event_datetime',
                  'platform_type', 'adid']
 
@@ -92,6 +107,13 @@ def get_latest_record(results):
         return None
     return max(results, key=event_time_value)
 
+def get_latest_stored_record(results):
+    """取最新一条已入库（st_status=1）的匹配记录，用于入库案例与入库错误原因或警告。"""
+    stored = [r for r in results if str(r.get('st_status', '')) == '1']
+    if not stored:
+        return None
+    return max(stored, key=event_time_value)
+
 def parse_number_sequence(seq_str):
     """
     解析序号字符串，支持格式：
@@ -144,13 +166,17 @@ def parse_excel_tracking_plan(excel_file, target_numbers):
             '上报时机': str(row.iloc[5]),  # 上报时机
             '上报参数详情': str(row.iloc[6]),  # 上报参数详情
             '前后端埋点': str(row.iloc[7]),  # 前后端埋点
-            '定义参数': [],  # 待解析
+            '定义参数': [],  # 待解析（必填 + 可选）
+            '必填参数': [],
+            '可选参数': [],
             '匹配条件': {}  # 待解析
         }
         
-        # 解析上报参数详情，提取参数名
-        params = parse_params_from_detail(point['上报参数详情'])
-        point['定义参数'] = params
+        # 解析上报参数详情，提取参数名（区分必填 / 可选）
+        parsed_params = parse_params_from_detail(point['上报参数详情'])
+        point['定义参数'] = parsed_params['all']
+        point['必填参数'] = parsed_params['required']
+        point['可选参数'] = parsed_params['optional']
         
         # 从上报参数详情解析匹配条件（非动态参数）
         point['匹配条件'] = parse_match_conditions_from_detail(point['上报参数详情'])
@@ -159,11 +185,50 @@ def parse_excel_tracking_plan(excel_file, target_numbers):
     
     return points
 
+def comment_indicates_optional(comment):
+    """判断 # 后注释是否将参数标为可选。"""
+    comment = comment.strip()
+    if not comment:
+        return False
+    if any(re.search(pattern, comment) for pattern in OPTIONAL_PARAM_COMMENT_PHRASES):
+        return True
+    return any(re.search(pattern, comment) for pattern in OPTIONAL_PARAM_COMMENT_STANDALONE)
+
+def is_optional_param_line(line):
+    """
+    判断参数是否可选，满足任一即视为可选：
+    1. # 注释含「有就报，没有就算了」等短语，或独立标注「可选 / 选填」
+    2. 值侧为 {可选参数}、{可选}、{选填...}、{可选补充} 等占位写法（有没有上报都无所谓）
+    """
+    if '#' in line:
+        comment = line.split('#', 1)[1]
+        if comment_indicates_optional(comment):
+            return True
+
+    if '=' not in line:
+        return False
+
+    value_part = line.split('=', 1)[1]
+    if '#' in value_part:
+        value_part = value_part.split('#', 1)[0]
+    value_part = value_part.strip()
+    if not value_part:
+        return False
+
+    # {可选参数}、{可选}、{选填参数} 等：花括号内语义为可选/选填
+    brace_match = re.match(r'^\{([^}]*)\}$', value_part)
+    if brace_match and re.search(r'可选|选填', brace_match.group(1)):
+        return True
+
+    return False
+
 def parse_params_from_detail(detail_str):
     """
-    从上报参数详情解析参数名
+    从上报参数详情解析参数名，区分必填与可选。
+    返回 {'all': [...], 'required': [...], 'optional': [...]}
     """
-    params = []
+    required = []
+    optional = []
     lines = detail_str.split('\n')
     for line in lines:
         line = line.strip()
@@ -173,23 +238,116 @@ def parse_params_from_detail(detail_str):
         # 提取参数名（=前面的部分）
         if '=' in line:
             param_name = line.split('=')[0].strip()
-            if param_name:
-                params.append(param_name)
+            if not param_name:
+                continue
+            if is_optional_param_line(line):
+                optional.append(param_name)
+            else:
+                required.append(param_name)
     
-    return params
+    return {
+        'all': required + optional,
+        'required': required,
+        'optional': optional,
+    }
 
-def check_param_compliance(properties, defined_params):
+def extract_nested_keys_for_param(detail_str, param_name):
+    """
+    从上报参数详情中的示例块提取嵌套 JSON 对象应包含的键名。
+    例如 element_content 示例 [{model_id: "xxx"}, {model_id: "yyy", pos: 0}]
+    返回 {'model_id', 'pos'}。
+    """
+    keys = set()
+    lines = detail_str.split('\n')
+    in_context = False
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if param_name in stripped:
+            in_context = True
+        if in_context or param_name in stripped:
+            for match in re.finditer(r'\{\s*"?([a-zA-Z_][a-zA-Z0-9_]*)"?\s*:', stripped):
+                keys.add(match.group(1))
+    return keys
+
+def parse_nested_key_expectations(detail_str, defined_params):
+    """解析各参数在嵌套 JSON 中期望出现的键名。"""
+    expectations = {}
+    for param_name in defined_params:
+        nested_keys = extract_nested_keys_for_param(detail_str, param_name)
+        if nested_keys:
+            expectations[param_name] = nested_keys
+    return expectations
+
+def try_parse_json_value(value):
+    """尝试将属性值解析为 JSON（支持字符串形式的 JSON）。"""
+    if value is None:
+        return None
+    if isinstance(value, (list, dict)):
+        return value
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+def check_nested_structure_compliance(properties, detail_str, defined_params):
+    """
+    校验嵌套结构：如 element_content 内应为 model_id，实际上报 model_name 则不合规。
+    """
+    issues = []
+    expectations = parse_nested_key_expectations(detail_str, defined_params)
+    for param_name, expected_keys in expectations.items():
+        if param_name not in properties:
+            continue
+        parsed = try_parse_json_value(properties[param_name])
+        if parsed is None:
+            continue
+        items = parsed if isinstance(parsed, list) else [parsed]
+        param_issue = None
+        for item in items:
+            if not isinstance(item, dict) or not item:
+                continue
+            actual_keys = set(item.keys())
+            for expected_key in expected_keys:
+                if expected_key not in actual_keys:
+                    wrong_keys = sorted(actual_keys - expected_keys)
+                    wrong_desc = '、'.join(wrong_keys) if wrong_keys else '（无）'
+                    param_issue = (
+                        f"【{param_name}】内应使用【{expected_key}】，实际上报【{wrong_desc}】"
+                    )
+                    break
+            if param_issue:
+                break
+        if param_issue:
+            issues.append(param_issue)
+    return issues
+
+def check_param_compliance(properties, defined_params, detail_str=None, optional_params=None):
     """
     对比实际上报参数与「上报参数详情」定义，判断是否合规。
-    每个点位只允许上报方案中定义的参数（系统预置参数除外）。
+    - 缺失必填参数、嵌套键名错误 → 不合规
+    - 多余参数 → 仅警告，不影响合规判定
+    - 可选参数（注释如「有就报，没有就算了」）缺失不算不合规
     """
+    optional_params = optional_params or []
+    required_params = [p for p in defined_params if p not in optional_params]
     actual_params = list(properties.keys())
     extra_params = [p for p in actual_params if p not in defined_params and p not in SYSTEM_PARAMS]
-    missing_params = [p for p in defined_params if p not in properties]
-    is_compliant = not extra_params and not missing_params
+    missing_params = [p for p in required_params if p not in properties]
+    nested_issues = []
+    if detail_str:
+        nested_issues = check_nested_structure_compliance(properties, detail_str, defined_params)
+    is_compliant = not missing_params and not nested_issues
     return {
         'extra_params': extra_params,
         'missing_params': missing_params,
+        'nested_issues': nested_issues,
         'is_compliant': is_compliant,
     }
 
@@ -228,7 +386,64 @@ def parse_match_conditions_from_detail(param_detail):
     
     return conditions
 
-def analyze_tracking_data(csv_file, target_event_name, target_page_name, defined_params, match_conditions):
+
+def parse_dynamic_params_from_detail(detail_str):
+    """
+    从上报参数详情中提取动态参数（值包含{...}占位，排除可选语义）。
+    返回 {param_name: placeholder_text}。
+    """
+    dynamic = {}
+    lines = detail_str.split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if '=' in line:
+            parts = line.split('=', 1)
+            param_name = parts[0].strip()
+            param_value = parts[1].strip()
+            if '#' in param_value:
+                param_value = param_value.split('#')[0].strip()
+            # 值以 {...} 开头即为动态参数（可能有后续描述文字）
+            brace_match = re.match(r'^\{([^}]*)\}', param_value)
+            if brace_match:
+                inner = brace_match.group(1)
+                if re.search(r'可选|选填', inner):
+                    continue
+                dynamic[param_name] = inner
+    return dynamic
+
+
+def collect_param_samples(all_results, dynamic_params, max_samples=20):
+    """
+    从所有匹配记录中收集动态参数的实际取值（最多 max_samples 个）。
+    返回 {param_name: [value1, value2, ...]}。
+    """
+    samples = {p: set() for p in dynamic_params}
+    if not samples:
+        return {}
+    for record in all_results:
+        props = record.get('properties', {})
+        for param in dynamic_params:
+            if param in props and props[param] is not None:
+                samples[param].add(str(props[param]))
+    result = {}
+    for param, values in samples.items():
+        sorted_vals = sorted(values)[:max_samples]
+        if sorted_vals:
+            result[param] = sorted_vals
+    return result
+
+
+def analyze_tracking_data(
+    csv_file,
+    target_event_name,
+    target_page_name,
+    defined_params,
+    match_conditions,
+    detail_str='',
+    optional_params=None,
+):
     """
     分析CSV数据，查找匹配的记录
     """
@@ -262,7 +477,9 @@ def analyze_tracking_data(csv_file, target_event_name, target_page_name, defined
             if not match:
                 continue
             
-            compliance = check_param_compliance(properties, defined_params)
+            compliance = check_param_compliance(
+                properties, defined_params, detail_str, optional_params=optional_params
+            )
             
             result = {
                 'st_pk_id': raw_message.get('st_pk_id', ''),
@@ -278,6 +495,7 @@ def analyze_tracking_data(csv_file, target_event_name, target_page_name, defined
                 'properties': properties,
                 'extra_params': compliance['extra_params'],
                 'missing_params': compliance['missing_params'],
+                'nested_issues': compliance['nested_issues'],
                 'is_compliant': compliance['is_compliant'],
                 'st_status': row.get('st_status', ''),
                 'st_error_info': row.get('st_error_info', ''),
@@ -291,7 +509,8 @@ def analyze_tracking_data(csv_file, target_event_name, target_page_name, defined
 def format_json_case(record, defined_params=None):
     """
     格式化JSON案例，包含预置属性和业务属性。
-    defined_params 不为空时，业务属性仅展示方案定义的参数。
+    defined_params 不为空时，业务属性展示方案定义的参数；
+    方案外多余参数单独放入「多余参数（方案未定义）」区块，与警告对应。
     """
     raw_message = record['raw_message']
     properties = record['properties']
@@ -299,6 +518,7 @@ def format_json_case(record, defined_params=None):
     case_data = {
         '预置属性和公共属性': {
             'st_pk_id': raw_message.get('st_pk_id', ''),
+            'st_status': record.get('st_status', ''),
             'st_user_id': raw_message.get('st_user_id', ''),
             'st_role_id': raw_message.get('st_role_id', ''),
             'st_account_id': raw_message.get('st_account_id', ''),
@@ -311,13 +531,18 @@ def format_json_case(record, defined_params=None):
         },
         '业务属性': {}
     }
+    extra_props = {}
     
     for key in properties:
         if key in SYSTEM_PARAMS:
             continue
         if defined_params is not None and key not in defined_params:
+            extra_props[key] = properties[key]
             continue
         case_data['业务属性'][key] = properties[key]
+    
+    if extra_props:
+        case_data['多余参数（方案未定义）'] = extra_props
     
     return case_data
 
@@ -354,7 +579,23 @@ def render_error_box(text):
         return '<div class="scroll-box error-box"><div class="empty-text">无</div></div>'
     return f'<div class="scroll-box error-box"><div class="error-text">{escape_html(text)}</div></div>'
 
-def get_system_errors(record):
+def get_compliance_from_record(record, point):
+    """基于指定记录的 properties 实时计算合规结果（与入库案例同源）。"""
+    if not record or not point:
+        return {
+            'extra_params': record.get('extra_params', []) if record else [],
+            'missing_params': record.get('missing_params', []) if record else [],
+            'nested_issues': record.get('nested_issues', []) if record else [],
+            'is_compliant': record.get('is_compliant', False) if record else False,
+        }
+    return check_param_compliance(
+        record.get('properties', {}),
+        point['定义参数'],
+        point['上报参数详情'],
+        optional_params=point.get('可选参数', []),
+    )
+
+def get_system_errors(record, compliance=None):
     """系统校验错误 + 缺失必填参数（真正导致入库失败的原因）。"""
     reasons = []
 
@@ -367,26 +608,45 @@ def get_system_errors(record):
         except Exception:
             reasons.append(st_error_info)
 
-    missing_params = record.get('missing_params', [])
+    missing_params = (compliance or {}).get('missing_params') or record.get('missing_params', [])
     if missing_params:
         reasons.append(f"必填参数【{'、'.join(missing_params)}】缺失")
 
     return reasons
 
-def get_extra_param_warning(record):
+def get_extra_param_warning(compliance):
     """方案未定义的多余参数，仅作警告，不影响 st_status=1 的入库判定。"""
-    extra_params = record.get('extra_params', [])
+    extra_params = compliance.get('extra_params', [])
     if extra_params:
         return f"参数【{'、'.join(extra_params)}】上报参数详情中不要求上报"
     return None
 
-def format_error_or_warning(record):
-    """格式：错误原因 / 警告 分行展示。"""
+def get_nested_compliance_warning(compliance):
+    """嵌套结构不合规（如 element_content 内键名与方案不一致）。"""
+    nested_issues = compliance.get('nested_issues', [])
+    if nested_issues:
+        return '；'.join(nested_issues)
+    return None
+
+def format_error_or_warning(record, point=None, stored_only=False):
+    """
+    格式：错误原因 / 不合规 / 警告 分行展示。
+    与入库案例使用同一条 record + 同一套 properties 实时校验。
+    """
+    compliance = get_compliance_from_record(record, point) if point else {
+        'extra_params': record.get('extra_params', []),
+        'missing_params': record.get('missing_params', []),
+        'nested_issues': record.get('nested_issues', []),
+    }
     parts = []
-    errors = get_system_errors(record)
-    if errors:
-        parts.append('错误原因：' + '；'.join(errors))
-    warning = get_extra_param_warning(record)
+    if not stored_only:
+        errors = get_system_errors(record, compliance)
+        if errors:
+            parts.append('错误原因：' + '；'.join(errors))
+    nested_warning = get_nested_compliance_warning(compliance)
+    if nested_warning:
+        parts.append('不合规：' + nested_warning)
+    warning = get_extra_param_warning(compliance)
     if warning:
         parts.append('警告：' + warning)
     return '\n'.join(parts) if parts else '无'
@@ -395,21 +655,32 @@ def get_error_reason(record):
     """兼容旧调用，等同于 format_error_or_warning。"""
     return format_error_or_warning(record)
 
-def classify_results(results):
+def classify_results(results, point):
     """
     每个点位仅取最新一条匹配记录判定上报/入库。
-    是否上报：存在匹配记录；是否入库：最新一条 st_status=1。
+    入库案例与合规判定使用同一条 case_record（已入库时取最新入库记录）。
     """
     latest = get_latest_record(results)
     if not latest:
-        return None, False, False
+        return None, None, False, False, False
     has_reported = True
-    has_stored = latest['st_status'] == '1'
-    return latest, has_reported, has_stored
+    has_stored = str(latest.get('st_status', '')) == '1'
+    case_record = get_latest_stored_record(results) if has_stored else latest
+    compliance = get_compliance_from_record(case_record, point)
+    is_compliant = compliance['is_compliant']
+    return latest, case_record, has_reported, has_stored, is_compliant
 
 def is_reported_and_stored(item):
     """是否已上报且已入库。"""
     return item['has_reported'] and item['has_stored']
+
+def is_reported_stored_compliant(item):
+    """是否已上报、已入库且合规。"""
+    return item['has_reported'] and item['has_stored'] and item.get('is_compliant', False)
+
+def is_reported_stored_non_compliant(item):
+    """是否已上报、已入库但不合规。"""
+    return item['has_reported'] and item['has_stored'] and not item.get('is_compliant', False)
 
 def is_reported_not_stored(item):
     """是否已上报但未入库。"""
@@ -421,7 +692,8 @@ def is_not_reported(item):
 
 TAB_FILTERS = {
     'all': lambda item: True,
-    'ok': is_reported_and_stored,
+    'ok_compliant': is_reported_stored_compliant,
+    'ok_non_compliant': is_reported_stored_non_compliant,
     'reported_not_stored': is_reported_not_stored,
     'not_reported': is_not_reported,
 }
@@ -437,20 +709,31 @@ def render_report_table_rows(all_results, tab_filter='all'):
         has_reported = item['has_reported']
         point = item['point']
         latest = item['latest']
+        case_record = item.get('case_record')
         has_stored = item['has_stored']
+        is_compliant = item.get('is_compliant', False)
 
         success_case = None
         error_or_warning = '无'
         error_case = None
 
-        if latest:
-            error_or_warning = format_error_or_warning(latest)
-            if has_stored:
-                success_case = format_json_case(latest, point['定义参数'])
-            else:
-                error_case = format_json_case(latest)
+        if has_stored and case_record:
+            success_case = format_json_case(case_record, point['定义参数'])
+            error_or_warning = format_error_or_warning(case_record, point, stored_only=True)
+        elif latest:
+            error_or_warning = format_error_or_warning(latest, point, stored_only=False)
+            error_case = format_json_case(latest)
 
         success_text = format_case_json_text(success_case)
+
+        param_samples = item.get('param_samples', {})
+        if param_samples and success_text != '无':
+            sample_lines = ['', '═══ 动态参数取值（最多20条） ═══']
+            for param, values in param_samples.items():
+                v_str = '、'.join(values)
+                sample_lines.append(f'  {param}: {v_str}')
+            success_text += '\n' + '\n'.join(sample_lines)
+
         error_text = format_case_json_text(error_case) if error_case else '无'
         page_id = point['页面标识'] if point['页面标识'] else '—'
         spec_detail = point['上报参数详情']
@@ -466,6 +749,7 @@ def render_report_table_rows(all_results, tab_filter='all'):
                 <td class="col-param"><pre class="spec-detail">{escape_html(spec_detail)}</pre></td>
                 <td class="col-status"><span class="{'yes' if has_reported else 'no'}">{'✅ 是' if has_reported else '❌ 否'}</span></td>
                 <td class="col-status"><span class="{'yes' if has_stored else 'no'}">{'✅ 是' if has_stored else '❌ 否'}</span></td>
+                <td class="col-status"><span class="{'yes' if is_compliant else 'no'}">{'✅ 是' if is_compliant else '❌ 否'}</span></td>
                 <td class="col-case">{render_case_box(success_text)}</td>
                 <td class="col-error">{render_error_box(error_or_warning)}</td>
                 <td class="col-case">{render_case_box(error_text)}</td>
@@ -504,6 +788,7 @@ REPORT_TABLE_HEADER = """
                 <col style="width: 320px">
                 <col style="width: 72px">
                 <col style="width: 72px">
+                <col style="width: 72px">
                 <col style="width: 510px">
                 <col style="width: 510px">
                 <col style="width: 510px">
@@ -516,6 +801,7 @@ REPORT_TABLE_HEADER = """
                 <th class="col-param">上报参数详情</th>
                 <th class="col-status">是否上报</th>
                 <th class="col-status">是否入库</th>
+                <th class="col-status">是否合规</th>
                 <th class="col-case">入库案例</th>
                 <th class="col-error">入库错误原因或警告</th>
                 <th class="col-case">错误案例</th>
@@ -528,12 +814,14 @@ def generate_html_report(all_results, input_meta=None):
     """
     # 统计
     total_points = len(all_results)
-    ok_points = sum(1 for r in all_results if is_reported_and_stored(r))
+    ok_compliant_points = sum(1 for r in all_results if is_reported_stored_compliant(r))
+    ok_non_compliant_points = sum(1 for r in all_results if is_reported_stored_non_compliant(r))
     reported_not_stored_points = sum(1 for r in all_results if is_reported_not_stored(r))
     not_reported_points = sum(1 for r in all_results if is_not_reported(r))
 
     all_rows_html = render_report_table_rows(all_results, tab_filter='all')
-    ok_rows_html = render_report_table_rows(all_results, tab_filter='ok')
+    ok_compliant_rows_html = render_report_table_rows(all_results, tab_filter='ok_compliant')
+    ok_non_compliant_rows_html = render_report_table_rows(all_results, tab_filter='ok_non_compliant')
     reported_not_stored_rows_html = render_report_table_rows(all_results, tab_filter='reported_not_stored')
     not_reported_rows_html = render_report_table_rows(all_results, tab_filter='not_reported')
     
@@ -612,19 +900,22 @@ def generate_html_report(all_results, input_meta=None):
         <h1>埋点点位验证报告</h1>
         <div class="summary">
             <span>总点位数：{total_points}</span>
-            <span>已上报已入库：{ok_points}</span>
+            <span>已上报已入库合规：{ok_compliant_points}</span>
+            <span>已上报已入库不合规：{ok_non_compliant_points}</span>
             <span>已上报未入库：{reported_not_stored_points}</span>
             <span>未上报：{not_reported_points}</span>
         </div>
         <div class="tabs">
             <button type="button" class="tab-btn active" data-tab="tab-all">全部 ({total_points})</button>
-            <button type="button" class="tab-btn" data-tab="tab-ok">已上报已入库 ({ok_points})</button>
+            <button type="button" class="tab-btn" data-tab="tab-ok-compliant">已上报已入库合规 ({ok_compliant_points})</button>
+            <button type="button" class="tab-btn" data-tab="tab-ok-non-compliant">已上报已入库不合规 ({ok_non_compliant_points})</button>
             <button type="button" class="tab-btn" data-tab="tab-reported-not-stored">已上报未入库 ({reported_not_stored_points})</button>
             <button type="button" class="tab-btn" data-tab="tab-not-reported">未上报 ({not_reported_points})</button>
         </div>"""
 
     html += render_tab_panel('tab-all', all_rows_html, '暂无验证点位', active=True)
-    html += render_tab_panel('tab-ok', ok_rows_html, '暂无已上报且已入库的点位')
+    html += render_tab_panel('tab-ok-compliant', ok_compliant_rows_html, '暂无已上报已入库合规的点位')
+    html += render_tab_panel('tab-ok-non-compliant', ok_non_compliant_rows_html, '暂无已上报已入库不合规的点位')
     html += render_tab_panel('tab-reported-not-stored', reported_not_stored_rows_html, '暂无已上报未入库的点位')
     html += render_tab_panel('tab-not-reported', not_reported_rows_html, '暂无未上报的点位')
     
@@ -700,24 +991,32 @@ def main():
     all_results = []
     for point in all_points:
         results = analyze_tracking_data(
-            csv_file, 
-            point['埋点事件'], 
-            point['页面标识'], 
-            point['定义参数'], 
-            point['匹配条件']
+            csv_file,
+            point['埋点事件'],
+            point['页面标识'],
+            point['定义参数'],
+            point['匹配条件'],
+            point['上报参数详情'],
+            optional_params=point.get('可选参数', []),
         )
-        latest, has_reported, has_stored = classify_results(results)
+        latest, case_record, has_reported, has_stored, is_compliant = classify_results(results, point)
         
+        dynamic_params = parse_dynamic_params_from_detail(point['上报参数详情'])
+        param_samples = collect_param_samples(results, dynamic_params)
+
         all_results.append({
             'point': point,
             'results': results,
             'latest': latest,
+            'case_record': case_record,
             'has_reported': has_reported,
             'has_stored': has_stored,
+            'is_compliant': is_compliant,
+            'param_samples': param_samples,
         })
         
         latest_dt = latest.get('st_event_datetime', '') if latest else ''
-        print(f"序号{point['序号']}: {point['埋点信息']} - 候选{len(results)}条, 取最新({latest_dt}), 上报={'是' if has_reported else '否'}, 入库={'是' if has_stored else '否'}")
+        print(f"序号{point['序号']}: {point['埋点信息']} - 候选{len(results)}条, 取最新({latest_dt}), 上报={'是' if has_reported else '否'}, 入库={'是' if has_stored else '否'}, 合规={'是' if is_compliant else '否'}")
     
     # 生成HTML报告
     html_content = generate_html_report(all_results, input_meta={

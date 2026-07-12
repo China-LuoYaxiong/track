@@ -33,26 +33,58 @@
 **判断条件：**
 - 取该点位**最新一条**候选匹配记录（按 `st_event_time` 降序）
 - 最新一条 `st_status` = 1 即算入库成功
-- **多余参数不阻断入库判定**（仅生成警告）
+- **多余参数不阻断入库判定**（仅生成警告，**不影响合规判定**）
 
 **结果：**
 - ✅ 是：最新一条 `st_status=1`
 - ❌ 否：无匹配记录，或最新一条 `st_status≠1`
 
-### 3. 参数校验（用于错误原因 / 警告）
+### 3. 合规验证
 
-**每个点位的白名单 = 「上报参数详情」解析出的参数名列表。**
+**判断条件（基于 `case_record`，与入库案例同源）：**
+- 已入库时：`case_record` = 最新 `st_status=1` 记录
+- 未入库时：`case_record` = `latest`
+- 顶层参数：无缺失**必填**参数（白名单来自「上报参数详情」，注释标注可选的不算缺失）
+- 嵌套结构：JSON 字符串字段（如 `element_content`）内对象键名须与方案示例一致
+- **多余参数仅警告，不影响合规**
+- 通过 `get_compliance_from_record(case_record, point)` **实时**计算，不使用缓存字段
+
+**嵌套结构校验逻辑：**
+1. 从「上报参数详情」示例块提取嵌套键名（如 `{model_id: "gpt-4o", pos: 0}` → `model_id`、`pos`）
+2. 解析实际上报的 JSON 字符串，检查数组内每个对象的键名
+3. 方案要求 `model_id`，实际上报 `model_name` → **不合规**
+
+**典型场景（序号46）：**
+- 方案：`element_content` 示例为 `[{model_id: "deepseek-v4-flash"}, ...]`
+- 实际上报：`[{"model_name":"claude-haiku-4-5"}, ...]`
+- `st_status=1` → 入库 ✅；键名错误 → 合规 ❌
+
+**结果：**
+- ✅ 是：无缺失必填参数、无嵌套键名错误
+- ❌ 否：缺失必填参数或存在嵌套键名错误
+- 多余参数仅产生警告，不计入不合规
+
+### 4. 参数校验（用于错误原因 / 不合规 / 警告）
+
+**每个点位的白名单 = 「上报参数详情」解析出的参数名列表（含必填与可选）。**
+
+**可选参数识别：** 满足任一即视为可选，缺失不算不合规：
+- 行内 `#` 注释含「有就报，没有就算了」「没有就算了」「非必填」
+- 行内 `#` 注释为**独立标注**「可选」「选填」（如 `# 可选`），**不会**误匹配「可选场景」「可选择」等描述性文字
+- 值侧为花括号占位且语义为可选，如 `model_id = {可选参数}`、`work_id={可选}`、`tag={选填参数}`、`element_content={可选补充}`
 
 **对比内容：**
 - 实际上报参数 vs 该点位白名单
 
 **分类：**
 - 预置属性和公共属性：必有字段
-- 业务属性：白名单中的参数（入库案例 JSON 仅展示白名单字段）
-- 多余参数 → **警告**（不导致入库失败）
-- 缺失参数 → **错误原因**
+- 业务属性：白名单中的参数；方案外多余参数单独展示在「多余参数（方案未定义）」区块
+- 多余参数 → **警告**（**不影响合规**）
+- 缺失必填参数 → **错误原因** + **不合规**
+- 缺失可选参数 → 忽略
+- 嵌套键名错误 → **不合规**
 
-## 错误与警告分类
+## 错误、不合规与警告分类
 
 ### 1. 错误原因
 
@@ -72,7 +104,20 @@
 错误原因：属性名【current_page_name】在埋点方案中不存在；必填参数【model_id】缺失
 ```
 
-### 2. 警告
+### 2. 不合规
+
+已入库（`st_status=1`）或已上报但参数/结构与方案不符：
+
+**来源：**
+- 嵌套 JSON 结构键名与方案示例不一致
+- 缺失**必填**参数（不含注释标注为可选的参数）
+
+**格式：**
+```
+不合规：【element_content】内应使用【model_id】，实际上报【model_name】
+```
+
+### 3. 警告
 
 方案未定义但已随数据上报（通常 `st_status=1` 仍入库成功）的多余参数：
 
@@ -87,11 +132,15 @@ system_params = ['extend', 'adid', 'current_page_url', 'platform_type']
 # 实际参数
 actual_params = list(properties.keys())
 
-# 多余参数 = 实际参数 - 白名单 - 系统预置参数
+# 多余参数 = 实际参数 - 白名单 - 系统预置参数（仅警告，不影响合规）
 extra_params = [p for p in actual_params if p not in defined_params and p not in system_params]
 
-# 缺失参数 = 白名单 - 实际参数
-missing_params = [p for p in defined_params if p not in actual_params]
+# 缺失必填参数 = 必填参数 - 实际参数（可选参数缺失忽略）
+required_params = [p for p in defined_params if p not in optional_params]
+missing_params = [p for p in required_params if p not in actual_params]
+
+# 合规 = 无缺失必填参数 且 无嵌套键名错误（extra_params 不计入）
+is_compliant = not missing_params and not nested_issues
 ```
 
 **格式：**
@@ -99,14 +148,15 @@ missing_params = [p for p in defined_params if p not in actual_params]
 警告：参数【ref_page_id、current_page_id、status、register_method】上报参数详情中不要求上报
 ```
 
-### 3. 展示规则
+### 4. 展示规则
 
-- **判定记录**：每个点位在所有候选中按 `st_event_time` 取**最新一条**
-- 已入库（最新一条 `st_status=1`）：入库案例展示白名单字段；有多余参数则显示**警告**；错误案例为「无」
-- 未入库（最新一条 `st_status≠1`）：显示**错误原因**（及可能的警告）；错误案例展示最新一条完整 JSON
-- 两者可同时出现（未入库时既有错误原因也有警告）
+- **判定记录**：每个点位在所有候选中按 `st_event_time` 取**最新一条**判定是否上报/是否入库
+- **入库案例与入库错误原因或警告**：共用同一条 `case_record`（已入库时取最新 `st_status=1` 记录），基于该记录 `properties` **实时**计算合规结果，保证两列数据一致
+- 已入库且合规：入库案例展示白名单 + 多余参数区块；无警告/不合规
+- 已入库但不合规：同上；显示**不合规**（及可能的**警告**）；错误案例为「无」
+- 未入库：显示**错误原因**；错误案例展示 `latest` 完整 JSON
 
-### 4. st_event_datetime 提取
+### 5. st_event_datetime 提取
 
 案例 JSON 中 `st_event_datetime` 位于 `st_event_time` 下方，取值优先级：
 
@@ -130,7 +180,27 @@ current_page_name, ref_page_url, element_pos, element_name
 ```
 current_page_name, ref_page_url, element_name
 ```
-**不含 element_pos 固定匹配条件** — 带 `element_pos` 的记录若 `st_status=1` 仍可能匹配并入库，多余 `element_pos` 显示为**警告**。
+**不含 element_pos 固定匹配条件** — 带 `element_pos` 的记录若 `st_status=1` 仍可能匹配并入库，多余 `element_pos` 显示为**警告**（不影响合规）。
+
+### 序号91 vs 120：版本迭代与全局汇总
+
+**序号91（页面级，旧规范）：** 不含 `element_tab`
+```
+current_page_name, ref_page_url, element_module, element_name
+```
+
+**序号120（全局汇总，新规范）：** 含 `element_tab`，`model_id` 为可选
+```
+model_id={模型id} # 有就报，没有就算了  → 可选参数
+element_tab={曝光来源...}
+```
+
+| 场景 | 判定 |
+|------|------|
+| 91 实际上报多了 `element_tab` | ✅ 合规 + **警告**（版本迭代新增字段） |
+| 120 实际上报无 `model_id` | ✅ 合规（可选参数缺失忽略） |
+| 120 实际上报有 `element_tab` 无 `model_id` | ✅ 合规 |
+| 方案写 `work_id = {可选参数}` 实际上报无 `work_id` | ✅ 合规（占位语义为可选） |
 
 ## 字段映射
 
@@ -139,6 +209,7 @@ current_page_name, ref_page_url, element_name
 | 字段名 | 说明 | 位置 |
 |--------|------|------|
 | st_pk_id | 主键ID | raw_message顶层 |
+| st_status | 入库状态（1=成功，2=事件不存在，3=属性校验失败） | CSV 行 st_status |
 | st_user_id | 用户ID | raw_message顶层 |
 | st_role_id | 角色ID | raw_message顶层 |
 | st_account_id | 账号ID | raw_message顶层 |
@@ -205,20 +276,22 @@ AND properties.element_module == 'search_confirm'
 | 指标 | 计算方式 |
 |------|----------|
 | 总点位数 | `len(all_results)` |
-| 已上报已入库 | `is_reported_and_stored(item)` 为真的点位数 |
+| 已上报已入库合规 | `is_reported_stored_compliant(item)` 为真的点位数 |
+| 已上报已入库不合规 | `is_reported_stored_non_compliant(item)` 为真的点位数 |
 | 已上报未入库 | `is_reported_not_stored(item)` 为真的点位数 |
 | 未上报 | `is_not_reported(item)` 为真的点位数 |
 
-恒等式：`总点位数 = 已上报已入库 + 已上报未入库 + 未上报`
+恒等式：`总点位数 = 已上报已入库合规 + 已上报已入库不合规 + 已上报未入库 + 未上报`
 
 ### Tab 切换
 
 | Tab | DOM id | 筛选规则 | 为空时提示 |
 |-----|--------|----------|------------|
 | 全部 | `tab-all` | 无筛选 | 暂无验证点位 |
-| 已上报已入库 | `tab-ok` | `has_reported=True` **且** `has_stored=True` | 暂无已上报且已入库的点位 |
-| 已上报未入库 | `tab-reported-not-stored` | `has_reported=True` **且** `has_stored=False` | 暂无已上报未入库的点位 |
-| 未上报 | `tab-not-reported` | `has_reported=False` | 暂无未上报的点位 |
+| 已上报已入库合规 | `tab-ok-compliant` | 上报 ✅、入库 ✅、合规 ✅ | 暂无已上报已入库合规的点位 |
+| 已上报已入库不合规 | `tab-ok-non-compliant` | 上报 ✅、入库 ✅、合规 ❌ | 暂无已上报已入库不合规的点位 |
+| 已上报未入库 | `tab-reported-not-stored` | 上报 ✅、入库 ❌ | 暂无已上报未入库的点位 |
+| 未上报 | `tab-not-reported` | 上报 ❌ | 暂无未上报的点位 |
 
 汇总统计与各 Tab 括号内计数一致。
 
@@ -265,15 +338,26 @@ AND properties.element_module == 'search_confirm'
 | 上报参数详情 | Excel 方案原文 | `.col-param` + `pre.spec-detail`，320px（×2.5），可换行 |
 | 是否上报 | ✅ 是 / ❌ 否 | 绿色/红色 |
 | 是否入库 | ✅ 是 / ❌ 否 | 绿色/红色 |
+| 是否合规 | ✅ 是 / ❌ 否 | 绿色/红色 |
 | 入库案例 | 最新一条入库记录 JSON | `.col-case` + `.scroll-box.case-box`，510px 宽 |
-| 入库错误原因或警告 | 错误原因 / 警告（分行） | `.col-error` + `.scroll-box.error-box`，510px 宽 |
+| 入库错误原因或警告 | 错误原因 / 不合规 / 警告（分行） | `.col-error` + `.scroll-box.error-box`，510px 宽 |
 | 错误案例 | 最新一条未入库 JSON；已入库「无」 | `.col-case` + `.scroll-box.case-box`，510px 宽 |
 
 ### JSON 案例格式
 
 - 使用 `format_case_json_text`：每个 `"key": value` 独占一行
 - `white-space: pre`，值不折行，长内容由外层 `.scroll-box` 横纵滚动查看
-- 入库案例业务属性仅含方案白名单字段
+-- 入库案例业务属性含方案白名单字段；方案外多余参数单独展示在「多余参数（方案未定义）」区块
+- 汇总型点位（含动态 `{...}` 占位参数）在入库案例 JSON 下方追加**动态参数采样**：
+  - 从所有候选记录中收集每个动态参数的实际取值，去重后最多展示 20 条
+  - 展示格式：
+    ```
+    ═══ 动态参数取值（最多20条） ═══
+      element_tab: value1、value2、…
+      current_page_name: value1、value2、…
+    ```
+  - 可选语义 `{可选参数}` 占位不参与采样
+  - 仅已入库点位展示（无候选记录时无采样）
 
 ### JSON案例结构（展示格式）
 
@@ -283,6 +367,7 @@ AND properties.element_module == 'search_confirm'
 {
   "预置属性和公共属性": {
     "st_pk_id": "uuid",
+    "st_status": "1",
     "st_event_time": 1234567890,
     "st_event_datetime": "2026-07-09 09:32:48",
     "platform_type": "web"
@@ -290,6 +375,10 @@ AND properties.element_module == 'search_confirm'
   "业务属性": {
     "current_page_name": "xxx_page",
     "ref_page_url": "https://..."
+  },
+  "多余参数（方案未定义）": {
+    "element_name": "model_expose",
+    "element_pos": "middle_content"
   }
 }
 ```
@@ -298,10 +387,20 @@ AND properties.element_module == 'search_confirm'
 
 | 函数 | 用途 |
 |------|------|
-| `is_reported_and_stored(item)` | 判定点位是否已上报且已入库 |
+| `parse_dynamic_params_from_detail(detail_str)` | 提取动态参数名（值侧以 `{...}` 开头，排除 `{可选参数}` 等可选语义），返回 `{param_name: placeholder}` |
+| `collect_param_samples(all_results, dynamic_params, max_samples=20)` | 从所有匹配记录的 properties 中收集动态参数的实际取值，去重排序后截取最多 max_samples 条 |
+| `is_optional_param_line(line)` | 判断参数是否可选：注释短语 或 值侧 `{可选参数}` 等占位 |
+| `check_param_compliance(properties, defined_params, detail_str, optional_params)` | 合规校验：多余参数仅警告，缺失必填/嵌套键名错误才不合规 |
+| `is_reported_stored_compliant(item)` | 判定点位是否已上报、已入库且合规 |
+| `is_reported_stored_non_compliant(item)` | 判定点位是否已上报、已入库但不合规 |
 | `is_reported_not_stored(item)` | 判定点位是否已上报但未入库 |
 | `is_not_reported(item)` | 判定点位是否未上报 |
-| `render_report_table_rows(all_results, tab_filter)` | 生成表格行；`tab_filter` 取值 `all` / `ok` / `reported_not_stored` / `not_reported` |
+| `get_latest_record(results)` | 取最新一条匹配记录，判定是否上报/是否入库 |
+| `get_latest_stored_record(results)` | 取最新已入库记录，作为 `case_record` |
+| `classify_results(results, point)` | 返回 `latest`、`case_record`、上报/入库/合规状态 |
+| `get_compliance_from_record(record, point)` | 基于指定记录 properties 实时计算合规（与入库案例同源） |
+| `format_error_or_warning(record, point, stored_only)` | 生成错误/不合规/警告；`stored_only=True` 时仅展示不合规与警告 |
+| `render_report_table_rows(all_results, tab_filter)` | 生成表格行；`tab_filter` 取值 `all` / `ok_compliant` / `ok_non_compliant` / `reported_not_stored` / `not_reported` |
 | `render_tab_panel(tab_id, rows_html, empty_message, active)` | 生成单个 Tab 面板 HTML |
 | `render_case_box(text)` | 入库案例 / 错误案例：`.col-case` + `.scroll-box.case-box`（510px 宽，180px 高，横纵滚动） |
 | `render_error_box(text)` | 入库错误原因或警告：`.col-error` + `.scroll-box.error-box`（510px 宽，120px 高，横纵滚动） |
