@@ -5,7 +5,18 @@
 | 文件 | 用途 |
 |------|------|
 | `副本-【odirouter】埋点方案与开发计划.xlsx` | 方案 Excel 列结构参考 |
-| `odirouter_test_data.csv` | 测试 CSV 字段格式参考 |
+| `odirouter_test_data.csv` | 完整导出格式参考（正式验证仅需 5 列） |
+| `odirouter_test_data_minimal.csv` | **5 列精简格式参考** |
+
+## 测试数据 CSV 精简格式（5 列）
+
+正式验证时用户 CSV **只需**以下列：
+
+```
+st_event_name,st_raw_message,st_status,st_error_info,st_available_message
+```
+
+详见 `odirouter_test_data_minimal.csv`。
 
 ## 正式验证时
 

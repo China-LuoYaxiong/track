@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""可选参数解析单元测试。"""
+"""可选参数解析与 CSV 列校验单元测试。"""
 
+import csv
+import os
+import tempfile
 import unittest
 
-from validate import is_optional_param_line, parse_params_from_detail
+from validate import REQUIRED_CSV_COLUMNS, assert_csv_columns, is_optional_param_line, parse_params_from_detail
 
 
 class TestOptionalParamParsing(unittest.TestCase):
@@ -60,6 +63,35 @@ class TestOptionalParamParsing(unittest.TestCase):
         line = 'element_content={可选补充} # 比如 switch_language 时传 CN、en 等'
         parsed = self._parsed('current_page_name=home_page', line)
         self.assertIn('element_content', parsed['optional'])
+
+
+class TestCsvColumns(unittest.TestCase):
+    def _write_csv(self, headers):
+        f = tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix='.csv', delete=False)
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        row = {h: '' for h in headers}
+        if 'st_event_name' in row:
+            row['st_event_name'] = 'log_click_client'
+        writer.writerow(row)
+        f.close()
+        return f.name
+
+    def test_required_columns_present(self):
+        path = self._write_csv(REQUIRED_CSV_COLUMNS)
+        try:
+            assert_csv_columns(path)
+        finally:
+            os.unlink(path)
+
+    def test_missing_column_exits(self):
+        headers = [c for c in REQUIRED_CSV_COLUMNS if c != 'st_available_message']
+        path = self._write_csv(headers)
+        try:
+            with self.assertRaises(SystemExit):
+                assert_csv_columns(path)
+        finally:
+            os.unlink(path)
 
 
 if __name__ == '__main__':

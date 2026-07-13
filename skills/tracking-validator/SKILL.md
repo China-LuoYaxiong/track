@@ -1,18 +1,22 @@
 ---
 name: tracking-validator
 description: >-
-  验证埋点点位的上报与入库状态。必须使用用户 @ 提供的埋点方案 xlsx 和测试数据 csv，
+  验证埋点点位的上报与入库状态。必须使用用户 @ 提供的埋点方案 xlsx 和测试数据 csv（csv 仅需 5 列：
+  st_event_name、st_raw_message、st_status、st_error_info、st_available_message），
   禁止使用 skill/source/ 内置示例文件。指定序号范围后输出 HTML 验证报告（五个 Tab：全部、已上报已入库合规、已上报已入库不合规、已上报未入库、未上报）；
   每点位取最新一条记录判定；含页面标识/埋点事件/上报参数详情对照列；区分错误原因、不合规与警告；
   支持嵌套 JSON 结构合规校验（如 element_content 内应为 model_id 而非 model_name）；
   多余参数仅警告不影响合规；解析可选参数（注释「有就报，没有就算了」或值侧 {可选参数} 占位）；
   入库案例与入库错误原因或警告共用 case_record 同源实时校验。
+  Excel「开发计划」中所有点位均须验证，含前端 _client 与后端 _server 事件。
   用于埋点开发后的数据质量验证和问题排查。
 ---
 
 # 埋点点位上报入库验证
 
 根据用户 **@ 提供的埋点方案 Excel** 和 **测试数据 CSV**，验证指定序号点位的上报与入库状态，输出 **HTML 验证报告**。
+
+**验证范围：** Excel「开发计划」Sheet 中**所有点位**，不区分前后端——只要 Excel 里有的都要验。前端 `_client` 与后端 `_server` 事件使用同一套规则。
 
 ## ⚠️ 输入文件规则（强制，最高优先级）
 
@@ -27,8 +31,35 @@ description: >-
 **典型用户文件（示例，以用户实际 @ 为准）：**
 ```
 /path/to/【odirouter】埋点方案与开发计划.xlsx
-/path/to/odirouter_data.csv
+/path/to/odirouter_data.csv   # 仅需 5 列，见「测试数据 CSV 格式」
 ```
+
+## 测试数据 CSV 格式（强制）
+
+用户提供 CSV 时**只需以下 5 列**（表头名称须完全一致）：
+
+| 列名 | 必填 | 说明 |
+|------|------|------|
+| `st_event_name` | ✅ | 事件名称，用于与 Excel「埋点事件」匹配 |
+| `st_raw_message` | ✅ | 完整上报 JSON（含 `properties` 及业务参数） |
+| `st_status` | ✅ | 入库状态（`1`=成功，其他=失败/未入库） |
+| `st_error_info` | ✅ | 入库失败原因（JSON；成功时可留空或 `{}`） |
+| `st_available_message` | ✅ | 可读事件时间等辅助信息（JSON；可为空，列须存在） |
+
+**表头示例：**
+```
+st_event_name,st_raw_message,st_status,st_error_info,st_available_message
+```
+
+**`st_raw_message` 内须包含：**
+- 顶层：`st_event_name`、`st_event_time`、`st_pk_id`、`st_user_id`、`st_role_id`、`st_account_id`、`st_distinct_id`
+- `properties`：业务参数（如 `current_page_name`、`element_module` 等）
+
+**`st_available_message` 取值优先级（用于报告 `st_event_datetime`）：**
+1. JSON 内的 `st_event_datetime`
+2. 若为空，由 `st_raw_message` 中 `st_event_time`（毫秒时间戳）转换
+
+`validate.py` 启动时会校验 CSV 是否包含上述 5 列；含额外列时仅提示，不影响验证。
 
 ## 必读资源
 
@@ -44,7 +75,7 @@ description: >-
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | excel_file | ✅ | 用户 @ 提供的埋点方案 Excel **绝对路径** |
-| csv_file | ✅ | 用户 @ 提供的测试数据 CSV **绝对路径** |
+| csv_file | ✅ | 用户 @ 提供的测试数据 CSV **绝对路径**（**仅需 5 列**，见下方） |
 | 序号范围 | ✅ | 要验证的序号，支持格式：`20-35`、`20,21,22`、`20-25,30,35`、`1-175`（全量） |
 | output_file | ❌ | 输出 HTML 路径；默认建议放在用户数据同目录，如 `tracking_report_all.html` |
 
@@ -99,13 +130,14 @@ description: >-
 - 跳过 `current_page_name`（已在步骤2中单独匹配）
 - 跳过注释内容（`#` 后面的内容）
 
-**CSV关键字段：**
+**CSV 必需列（仅此 5 列）：**
 | 字段 | 说明 |
 |------|------|
 | st_event_name | 事件名称 |
+| st_raw_message | 完整上报数据（JSON） |
 | st_status | 状态（1=入库成功） |
-| st_error_info | 错误信息（JSON格式） |
-| st_raw_message | 完整上报数据（JSON格式） |
+| st_error_info | 错误信息（JSON） |
+| st_available_message | 辅助信息（JSON，可为空；用于 `st_event_datetime`） |
 
 ### Step 3：校验参数并判定上报/入库/合规
 
@@ -343,8 +375,10 @@ python scripts/validate.py \
 ## 质量检查
 
 - [ ] **使用的是用户 @ 提供的 xlsx / csv，而非 skill/source/ 内置文件**
+- [ ] **CSV 仅含必需 5 列**（`st_event_name`、`st_raw_message`、`st_status`、`st_error_info`、`st_available_message`）
 - [ ] 执行前已向用户明确列出两个输入文件的绝对路径
 - [ ] Excel解析正确，序号与埋点信息对应
+- [ ] **Excel 中所有点位均已纳入验证**（含前端 `_client` 与后端 `_server`，用户指定序号范围内无遗漏）
 - [ ] 每个点位的参数白名单来自「上报参数详情」
 - [ ] 必填/可选参数解析准确（含注释「有就报，没有就算了」、值侧 `{可选参数}` 等占位）
 - [ ] 多余参数仅警告、缺失必填参数才不合规，排除系统预置参数
@@ -391,6 +425,7 @@ python scripts/validate.py \
 ### Q4: 如何区分前端和后端上报？
 - 事件名以 `_client` 结尾 → 前端上报
 - 事件名以 `_server` 结尾 → 后端上报
+- **验证时不区分**：Excel 里有的前后端点位都要验，后端埋点页面标识通常为空，仅按事件名匹配
 
 ### Q5: 五个 Tab 怎么划分？
 - **已上报已入库合规**：最新一条 `st_status=1`，且无缺失必填参数、无嵌套键名错误（含仅有多余参数警告的点位）
@@ -413,3 +448,9 @@ python scripts/validate.py \
 - 旧点位多了新字段（如 `element_tab`）→ **警告**，仍合规（版本迭代常见）
 - 全局点位含可选参数（如 `model_id # 有就报，没有就算了`）→ 缺失不算不合规
 - 建议：版本迭代后同步更新页面级点位的 Excel 定义，或依赖全局汇总点位（120/121）做新规范验收
+
+## 与 analytics-tracking-plan 的关系
+
+- **analytics-tracking-plan**：负责**前端埋点方案设计**（截图 → HTML 清单），方案字段语义与本 Skill 验收规则对齐
+- **tracking-validator（本 Skill）**：负责**全量验收**，Excel「开发计划」中所有点位（前端 + 后端）均须验证
+- 验收执行使用本目录下的 `scripts/validate.py`，不依赖其他 skill 路径

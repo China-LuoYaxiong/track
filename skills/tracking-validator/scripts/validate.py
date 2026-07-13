@@ -38,6 +38,15 @@ PRESET_FIELDS = ['st_pk_id', 'st_status', 'st_user_id', 'st_role_id', 'st_accoun
                  'st_distinct_id', 'st_event_name', 'st_event_time', 'st_event_datetime',
                  'platform_type', 'adid']
 
+# 测试数据 CSV 必需列（用户提供时仅需这 5 列）
+REQUIRED_CSV_COLUMNS = [
+    'st_event_name',
+    'st_raw_message',
+    'st_status',
+    'st_error_info',
+    'st_available_message',
+]
+
 def get_skill_source_dir():
     """skill 内置示例文件目录（禁止用于正式验证）。"""
     return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'source'))
@@ -64,6 +73,29 @@ def assert_user_input_files(excel_file, csv_file):
             print(f'错误：{label} 使用了 skill 内置示例文件，禁止用于验证: {os.path.abspath(path)}')
             print('请改用用户 @ 提供的 xlsx 和 csv 文件。')
             sys.exit(1)
+
+
+def assert_csv_columns(csv_file):
+    """校验 CSV 包含验证所需的 5 列。"""
+    with open(csv_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames:
+            print('错误：CSV 文件为空或缺少表头。')
+            sys.exit(1)
+        headers = [h.strip() for h in reader.fieldnames if h and h.strip()]
+        missing = [col for col in REQUIRED_CSV_COLUMNS if col not in headers]
+        if missing:
+            print('错误：测试数据 CSV 缺少必需列：')
+            for col in missing:
+                print(f'  - {col}')
+            print('')
+            print('请提供以下 5 列（表头名称须完全一致）：')
+            for col in REQUIRED_CSV_COLUMNS:
+                print(f'  - {col}')
+            sys.exit(1)
+        extra = [col for col in headers if col not in REQUIRED_CSV_COLUMNS]
+        if extra:
+            print(f'提示：CSV 含额外列 {extra}，验证时仅使用必需 5 列，其余列可忽略。')
 
 def event_time_value(record):
     """用于排序，数值越大越新。"""
@@ -94,11 +126,6 @@ def extract_event_datetime(raw_message, csv_row=None):
         except Exception:
             pass
 
-    if csv_row:
-        for key in ('st_update_at', 'st_report_time', 'st_event_date'):
-            val = csv_row.get(key, '')
-            if val:
-                return str(val).strip()
     return ''
 
 def get_latest_record(results):
@@ -973,6 +1000,7 @@ def main():
     output_file = sys.argv[4] if len(sys.argv) > 4 else None
 
     assert_user_input_files(excel_file, csv_file)
+    assert_csv_columns(csv_file)
     print('=== 本次验证使用的文件（用户提供）===')
     print(f'埋点方案: {excel_file}')
     print(f'测试数据: {csv_file}')

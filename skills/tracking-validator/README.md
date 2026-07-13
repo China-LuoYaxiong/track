@@ -11,11 +11,25 @@
 | 输入 | 要求 |
 |------|------|
 | 埋点方案 Excel | 用户 @ 提供的 xlsx，**绝对路径** |
-| 测试数据 CSV | 用户 @ 提供的 csv，**绝对路径** |
+| 测试数据 CSV | 用户 @ 提供的 csv，**绝对路径**（**仅需 5 列**） |
 | 序号范围 | 如 `20-35` 或 `1-175` |
 
 > **禁止**使用 `source/` 目录下的内置示例文件进行正式验证。  
 > 用户未提供路径时，应先询问，不得 fallback 到 skill 内置文件。
+
+### CSV 必需列（5 列）
+
+```
+st_event_name, st_raw_message, st_status, st_error_info, st_available_message
+```
+
+| 列 | 说明 |
+|----|------|
+| st_event_name | 事件名，匹配 Excel「埋点事件」 |
+| st_raw_message | 完整上报 JSON |
+| st_status | `1` = 入库成功 |
+| st_error_info | 入库失败原因 |
+| st_available_message | 辅助信息（可为空） |
 
 ## 输出
 

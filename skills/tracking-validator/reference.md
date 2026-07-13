@@ -13,6 +13,18 @@
 
 `source/` 目录文件仅用于 Skill 开发时了解 Excel/CSV 列结构，**不能替代用户真实数据**。
 
+## 测试数据 CSV 格式（用户提供时仅需 5 列）
+
+| 列名 | 说明 |
+|------|------|
+| `st_event_name` | 事件名称 |
+| `st_raw_message` | 完整上报 JSON（含 `properties` 及业务参数） |
+| `st_status` | 入库状态（`1`=成功） |
+| `st_error_info` | 入库失败原因（JSON；成功时可 `{}`） |
+| `st_available_message` | 辅助 JSON（可为空；优先取其中 `st_event_datetime`） |
+
+表头须完全一致。`validate.py` 启动时校验这 5 列；含额外列时仅提示，不影响验证。
+
 ## 验证规则
 
 ### 1. 上报验证
@@ -161,8 +173,7 @@ is_compliant = not missing_params and not nested_issues
 案例 JSON 中 `st_event_datetime` 位于 `st_event_time` 下方，取值优先级：
 
 1. CSV `st_available_message` 中的 `st_event_datetime`
-2. 由 `st_event_time`（毫秒时间戳）转换：`YYYY-MM-DD HH:MM:SS`
-3. 兜底：CSV 的 `st_update_at` / `st_report_time` / `st_event_date`
+2. 由 `st_raw_message` 内 `st_event_time`（毫秒时间戳）转换：`YYYY-MM-DD HH:MM:SS`
 
 ## 同事件多点位区分示例
 
