@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>20260717 埋点清单</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f5f6f8;
+      color: #1f2329;
+      line-height: 1.5;
+    }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .copy-btn {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 16px;
+      border: 1px solid #3370ff;
+      border-radius: 6px;
+      background: #3370ff;
+      color: #fff;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: #245bdb; border-color: #245bdb; }
+    .copy-btn:active { background: #1e4fc4; }
+    .copy-status {
+      font-size: 13px;
+      color: #2ea121;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      background: #fff;
+      border: 1px solid #dee0e3;
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid #dee0e3;
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #f2f3f5;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td:nth-child(1) { min-width: 160px; }
+    td:nth-child(2) { min-width: 72px; text-align: center; }
+    td:nth-child(3) { min-width: 110px; }
+    td:nth-child(4) { min-width: 180px; }
+    td:nth-child(5) { min-width: 140px; }
+    td:nth-child(6) { min-width: 420px; }
+    td:nth-child(7) { min-width: 80px; white-space: nowrap; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      background: #f2f3f5;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .params {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .comment { color: #8f959e; }
+    .param-ext {
+      color: #d83931;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h2>埋点清单</h2>
+    <div class="toolbar">
+      <button type="button" class="copy-btn" id="copy-table-btn">一键复制数据行</button>
+      <span class="copy-status" id="copy-status"></span>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="tracking-table">
+      <thead>
+        <tr>
+          <th>埋点信息</th>
+          <th>页面截图</th>
+          <th>页面标识</th>
+          <th>埋点事件</th>
+          <th>上报时机</th>
+          <th>上报参数详情</th>
+          <th>前后端埋点</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>公共首页-顶部导航-Telegram点击</td>
+          <td>-</td>
+          <td><code>public_home_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击右上角 Telegram 按钮时上报</td>
+          <td class="params">current_page_name = public_home_page
+ref_page_url={前页的url}
+element_pos=top_nav
+element_name=telegram</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>公共首页-限时折上折弹窗曝光</td>
+          <td>-</td>
+          <td><code>public_home_page</code></td>
+          <td><code>log_element_expose_client</code></td>
+          <td>限时折上折弹窗展示时上报</td>
+          <td class="params">current_page_name = public_home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name=limited_discount_popup_expose
+element_content={可选补充} <span class="comment"># 比如折扣文案 90%</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>公共首页-限时折上折弹窗点击</td>
+          <td>-</td>
+          <td><code>public_home_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击弹窗内按钮时上报</td>
+          <td class="params">current_page_name = public_home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name={点击什么报什么} <span class="comment"># go_see_now（现在就去看吧）、close</span>
+element_content={可选补充}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-曝光</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_page_expose_client</code></td>
+          <td>页面曝光时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-限时折上折弹窗曝光</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_element_expose_client</code></td>
+          <td>限时折上折弹窗展示时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name=limited_discount_popup_expose
+element_content={可选补充} <span class="comment"># 比如折扣文案 90%</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-限时折上折弹窗点击</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击弹窗内按钮时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name={点击什么报什么} <span class="comment"># go_see_now（现在就去看吧）、close</span>
+element_content={可选补充}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-开始使用文档卡片点击</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击「开始使用 OdiRouter」区域三个文档卡片时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=get_started_docs
+element_name={点击什么报什么} <span class="comment"># quick_start（快速启动）、integration（整合）、support（支持）</span>
+element_content={卡片展示名} <span class="comment"># 比如 快速启动、整合、支持</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-侧边栏点击</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击左侧导航时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=left_nav
+element_name={点击的地方} <span class="comment"># home、models、pricing、playground、api_keys、request_logs、credits、usage、telegram、email、account、docs 等</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-奖励任务弹窗-Telegram入口点击</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击奖励任务弹窗中加入 Telegram 社区入口时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}
+element_module=reward_task
+element_name=join_telegram
+element_content={可选补充} <span class="comment"># 比如 join_telegram_community、+$1</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-付费候补成功弹窗曝光</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_element_expose_client</code></td>
+          <td>问卷/候补填写完毕后成功弹窗展示时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=paid_waitlist_success
+element_name=paid_waitlist_success_expose</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>首页-付费候补成功弹窗-Telegram入口点击</td>
+          <td>-</td>
+          <td><code>home_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击候补成功弹窗中 Telegram 加入按钮时上报</td>
+          <td class="params">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=paid_waitlist_success
+element_name={点击什么报什么} <span class="comment"># join_telegram、close</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>模型详情页-曝光</td>
+          <td>-</td>
+          <td><code>model_detail_page</code></td>
+          <td><code>log_page_expose_client</code></td>
+          <td>页面曝光时上报（登录前/登录后均上报）</td>
+          <td class="params">current_page_name = model_detail_page
+model_id={模型id}
+ref_page_url={前页的url}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>模型详情页-快速启动点击</td>
+          <td>-</td>
+          <td><code>model_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击快速启动按钮时上报（登录前/登录后均上报）</td>
+          <td class="params">current_page_name = model_detail_page
+model_id={模型id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=quick_start
+element_name=quick_start</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>模型详情页-Tab点击</td>
+          <td>-</td>
+          <td><code>model_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击模型详情页主 Tab 时上报（登录前/登录后均上报）</td>
+          <td class="params">current_page_name = model_detail_page
+model_id={模型id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=detail_tab
+element_name={tab_key} <span class="comment"># overview（综述/评估）、performance（表现）、api</span>
+element_content={Tab 展示名} <span class="comment"># 比如 综述/评估、表现、API</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>模型详情页-API子Tab点击</td>
+          <td>-</td>
+          <td><code>model_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>在 API Tab 内切换子 Tab 时上报</td>
+          <td class="params">current_page_name = model_detail_page
+model_id={模型id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=api_sub_tab
+element_name={tab_key} <span class="comment"># chat_completions（聊天完成功能）、responses_api（响应 API）、humanized_info（人化信息）</span>
+element_content={Tab 展示名}</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>模型详情页-API区按钮点击</td>
+          <td>-</td>
+          <td><code>model_detail_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击 API 区域「创建 API 密钥 / 复制」时上报</td>
+          <td class="params">current_page_name = model_detail_page
+model_id={模型id}
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=api_panel
+element_name={点击什么报什么} <span class="comment"># create_api_key、copy</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>playground页-曝光</td>
+          <td>-</td>
+          <td><code>playground_page</code></td>
+          <td><code>log_page_expose_client</code></td>
+          <td>页面曝光时上报（含对话中页面）</td>
+          <td class="params">current_page_name = playground_page
+ref_page_url={前页的url}
+model_id={当前模型id} <span class="comment"># 有就报，没有就算了</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>playground页-模型卡片点击</td>
+          <td>-</td>
+          <td><code>playground_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击 playground 模型介绍卡片时上报</td>
+          <td class="params">current_page_name = playground_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=model_click
+model_id={点击的模型id}
+element_name=model_card</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>playground页-模型卡片-调用API点击</td>
+          <td>-</td>
+          <td><code>playground_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击模型卡片上「调用 API」时上报</td>
+          <td class="params">current_page_name = playground_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=model_card_actions
+model_id={当前模型id}
+element_name=call_api</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>playground页-模型卡片-创建API密钥点击</td>
+          <td>-</td>
+          <td><code>playground_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击模型卡片上「创建 API 密钥」时上报</td>
+          <td class="params">current_page_name = playground_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=model_card_actions
+model_id={当前模型id}
+element_name=create_api_key</td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>playground页-对话中右上角按钮点击</td>
+          <td>-</td>
+          <td><code>playground_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>对话中点击右上角「创建 API 密钥 / API」时上报</td>
+          <td class="params">current_page_name = playground_page
+ref_page_url={前页的url}
+element_pos=chat
+element_module=chat_top_actions
+model_id={当前模型id} <span class="comment"># 有就报，没有就算了</span>
+element_name={点击什么报什么} <span class="comment"># create_api_key、api</span></td>
+          <td>前端上报</td>
+        </tr>
+        <tr>
+          <td>playground页-侧边栏点击</td>
+          <td>-</td>
+          <td><code>playground_page</code></td>
+          <td><code>log_click_client</code></td>
+          <td>点击左侧导航时上报</td>
+          <td class="params">current_page_name = playground_page
+ref_page_url={前页的url}
+element_pos=left_nav
+element_name={点击的地方} <span class="comment"># home、models、pricing、playground、api_keys、request_logs、credits、usage、telegram、email、account、docs 等</span></td>
+          <td>前端上报</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <script>
+    (function () {
+      var table = document.getElementById('tracking-table');
+      var btn = document.getElementById('copy-table-btn');
+      var status = document.getElementById('copy-status');
+
+      function cellText(cell) {
+        return (cell.innerText || cell.textContent || '').replace(/\r\n/g, '\n').trim();
+      }
+
+      function escapeTsvField(value) {
+        var s = String(value);
+        if (/[\t\n\r"]/.test(s)) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      }
+
+      function tableToTsv() {
+        var rows = table.querySelectorAll('tbody tr');
+        var lines = [];
+        for (var i = 0; i < rows.length; i++) {
+          var cells = rows[i].querySelectorAll('td');
+          var parts = [];
+          for (var j = 0; j < cells.length; j++) {
+            parts.push(escapeTsvField(cellText(cells[j])));
+          }
+          lines.push(parts.join('\t'));
+        }
+        return lines.join('\n');
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function textToExcelCellHtml(text) {
+        var lines = String(text).split('\n');
+        if (lines.length <= 1) {
+          return escapeHtml(text);
+        }
+        return lines.map(function (line) {
+          return escapeHtml(line);
+        }).join('<br style="mso-data-placement:same-cell;">');
+      }
+
+      function prepareTableForExcelCopy() {
+        var tbody = table.querySelector('tbody');
+        var clone = document.createElement('table');
+        clone.setAttribute('border', '1');
+        clone.setAttribute('cellpadding', '4');
+        clone.setAttribute('cellspacing', '0');
+        clone.setAttribute('style', 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12pt;');
+        clone.appendChild(tbody.cloneNode(true));
+
+        var cells = clone.querySelectorAll('td');
+        for (var i = 0; i < cells.length; i++) {
+          var cell = cells[i];
+          var text = cellText(cell);
+          cell.innerHTML = textToExcelCellHtml(text);
+          cell.setAttribute(
+            'style',
+            'vertical-align:top;white-space:pre-wrap;mso-data-placement:same-cell;'
+          );
+        }
+        return clone;
+      }
+
+      function toCfHtml(tableHtml) {
+        var start = '<html><head><meta charset="utf-8"></head><body>\r\n<!--StartFragment-->';
+        var end = '<!--EndFragment-->\r\n</body></html>';
+        var fragment = start + tableHtml + end;
+        var template =
+          'Version:0.9\r\n' +
+          'StartHTML:0000000000\r\n' +
+          'EndHTML:0000000000\r\n' +
+          'StartFragment:0000000000\r\n' +
+          'EndFragment:0000000000\r\n';
+        var full = template + fragment;
+
+        function pad(n) {
+          var s = String(n);
+          while (s.length < 10) s = '0' + s;
+          return s;
+        }
+
+        var startHtml = template.length;
+        var startFragment = template.length + start.length;
+        var endFragment = startFragment + tableHtml.length;
+        var endHtml = full.length;
+
+        return full
+          .replace('StartHTML:0000000000', 'StartHTML:' + pad(startHtml))
+          .replace('EndHTML:0000000000', 'EndHTML:' + pad(endHtml))
+          .replace('StartFragment:0000000000', 'StartFragment:' + pad(startFragment))
+          .replace('EndFragment:0000000000', 'EndFragment:' + pad(endFragment));
+      }
+
+      function tableToHtmlDocument() {
+        var clone = prepareTableForExcelCopy();
+        return toCfHtml(clone.outerHTML);
+      }
+
+      function tableToPlainHtmlDocument() {
+        var clone = prepareTableForExcelCopy();
+        return (
+          '<html><head><meta charset="utf-8"></head><body>' +
+          clone.outerHTML +
+          '</body></html>'
+        );
+      }
+
+      function copyViaSelection(htmlDoc) {
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = htmlDoc;
+        wrapper.setAttribute('contenteditable', 'true');
+        wrapper.style.position = 'fixed';
+        wrapper.style.left = '-9999px';
+        wrapper.style.top = '0';
+        document.body.appendChild(wrapper);
+
+        var tableNode = wrapper.querySelector('table');
+        var range = document.createRange();
+        range.selectNodeContents(tableNode || wrapper);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        var ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } finally {
+          sel.removeAllRanges();
+          document.body.removeChild(wrapper);
+        }
+        return ok;
+      }
+
+      function showSuccess() {
+        status.textContent = '已复制数据行，可直接粘贴到 Excel';
+        setTimeout(function () { status.textContent = ''; }, 2500);
+      }
+
+      function showError() {
+        status.textContent = '复制失败，请手动全选表格复制';
+        status.style.color = '#d83931';
+        setTimeout(function () {
+          status.textContent = '';
+          status.style.color = '#2ea121';
+        }, 3000);
+      }
+
+      btn.addEventListener('click', function () {
+        var htmlDoc = tableToHtmlDocument();
+        var plainHtmlDoc = tableToPlainHtmlDocument();
+        var tsv = tableToTsv();
+
+        function trySelectionCopy() {
+          if (copyViaSelection(plainHtmlDoc)) {
+            showSuccess();
+            return true;
+          }
+          return false;
+        }
+
+        if (navigator.clipboard && window.ClipboardItem) {
+          var htmlBlob = new Blob([htmlDoc], { type: 'text/html' });
+          var textBlob = new Blob([tsv], { type: 'text/plain' });
+          navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': htmlBlob,
+              'text/plain': textBlob
+            })
+          ]).then(showSuccess).catch(function () {
+            if (!trySelectionCopy()) {
+              if (navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(tsv).then(showSuccess).catch(showError);
+              } else {
+                showError();
+              }
+            }
+          });
+          return;
+        }
+
+        if (!trySelectionCopy()) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(tsv).then(showSuccess).catch(showError);
+          } else {
+            showError();
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
