@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>埋点验证报告</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        h1 { padding: 15px 20px; background: #007bff; color: white; font-size: 16px; }
+        .table-wrap { overflow-x: auto; max-width: 100%; }
+        table {
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: fixed;
+            width: max-content;
+            min-width: 100%;
+            --col-no-width: 48px;
+            --col-name-width: 130px;
+            --col-spec-width: 110px;
+            --col-event-width: 128px;
+            --col-param-width: calc(var(--col-event-width) * 2.5);
+            --col-status-width: 72px;
+            --col-case-width: 510px;
+        }
+        th, td { padding: 8px 6px; border: 1px solid #e9ecef; vertical-align: top; text-align: left; overflow: hidden; }
+        th { background: #f8f9fa; font-weight: bold; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+        th.col-no, td.col-no { width: var(--col-no-width); min-width: var(--col-no-width); max-width: var(--col-no-width); white-space: nowrap; }
+        th.col-name, td.col-name { width: var(--col-name-width); min-width: var(--col-name-width); max-width: var(--col-name-width); white-space: normal; word-break: break-word; line-height: 1.45; }
+        th.col-spec, td.col-spec { width: var(--col-spec-width); min-width: var(--col-spec-width); max-width: var(--col-spec-width); word-break: break-all; }
+        th.col-event { width: var(--col-event-width); min-width: var(--col-event-width); max-width: var(--col-event-width); white-space: nowrap; font-weight: bold; }
+        td.col-event { width: var(--col-event-width); min-width: var(--col-event-width); max-width: var(--col-event-width); white-space: normal; word-break: break-all; line-height: 1.45; font-family: Consolas, monospace; font-size: 11px; }
+        th.col-param, td.col-param { width: var(--col-param-width); min-width: var(--col-param-width); max-width: var(--col-param-width); white-space: normal; word-break: break-word; line-height: 1.45; }
+        th.col-status, td.col-status { width: var(--col-status-width); min-width: var(--col-status-width); max-width: var(--col-status-width); white-space: nowrap; text-align: center; }
+        th.col-case, td.col-case, th.col-error, td.col-error { width: var(--col-case-width); min-width: var(--col-case-width); max-width: var(--col-case-width); padding: 6px; }
+        .scroll-box { overflow: auto; border-radius: 4px; border: 1px solid #dee2e6; max-width: 100%; }
+        .scroll-box.case-box { width: 100%; height: 180px; background: #2d3748; }
+        .scroll-box.error-box { width: 100%; height: 120px; background: #fff3cd; }
+        pre.case-json { color: #e2e8f0; padding: 8px; font-size: 10px; white-space: pre; margin: 0; font-family: Consolas, monospace; display: block; width: max-content; min-width: 100%; }
+        pre.spec-detail { background: #f8f9fa; color: #333; padding: 6px 8px; border-radius: 4px; font-size: 10px; white-space: pre-wrap; word-break: break-word; margin: 0; font-family: Consolas, monospace; max-width: 100%; }
+        .error-text { color: #856404; padding: 6px 8px; font-size: 11px; white-space: pre-wrap; word-break: break-word; line-height: 1.45; margin: 0; }
+        .empty-text { color: #adb5bd; padding: 8px; font-size: 11px; text-align: center; }
+        .yes { color: #28a745; font-weight: bold; }
+        .no { color: #dc3545; font-weight: bold; }
+        .footer { padding: 10px 20px; background: #f8f9fa; font-size: 11px; color: #6c757d; }
+        .summary { padding: 15px 20px; background: #e9ecef; }
+        .summary span { margin-right: 20px; }
+        .tabs { display: flex; gap: 0; padding: 0 20px; background: #e9ecef; border-bottom: 1px solid #dee2e6; }
+        .tab-btn {
+            padding: 10px 18px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            color: #495057;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
+        }
+        .tab-btn:hover { color: #007bff; }
+        .tab-btn.active {
+            color: #007bff;
+            font-weight: bold;
+            border-bottom-color: #007bff;
+            background: white;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .tab-empty { padding: 40px 20px; text-align: center; color: #6c757d; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>埋点点位验证报告</h1>
+        <div class="summary">
+            <span>总点位数：6</span>
+            <span>已上报已入库合规：6</span>
+            <span>已上报已入库不合规：0</span>
+            <span>已上报未入库：0</span>
+            <span>未上报：0</span>
+        </div>
+        <div class="tabs">
+            <button type="button" class="tab-btn active" data-tab="tab-all">全部 (6)</button>
+            <button type="button" class="tab-btn" data-tab="tab-ok-compliant">已上报已入库合规 (6)</button>
+            <button type="button" class="tab-btn" data-tab="tab-ok-non-compliant">已上报已入库不合规 (0)</button>
+            <button type="button" class="tab-btn" data-tab="tab-reported-not-stored">已上报未入库 (0)</button>
+            <button type="button" class="tab-btn" data-tab="tab-not-reported">未上报 (0)</button>
+        </div>
+        <div id="tab-all" class="tab-panel active">
+        <div class="table-wrap">
+        <table>
+            
+            <colgroup>
+                <col style="width: 48px">
+                <col style="width: 130px">
+                <col style="width: 110px">
+                <col style="width: 128px">
+                <col style="width: 320px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+            </colgroup>
+            <tr>
+                <th class="col-no">序号</th>
+                <th class="col-name">埋点信息</th>
+                <th class="col-spec">页面标识</th>
+                <th class="col-event">埋点事件</th>
+                <th class="col-param">上报参数详情</th>
+                <th class="col-status">是否上报</th>
+                <th class="col-status">是否入库</th>
+                <th class="col-status">是否合规</th>
+                <th class="col-case">入库案例</th>
+                <th class="col-error">入库错误原因或警告</th>
+                <th class="col-case">错误案例</th>
+            </tr>
+            
+            <tr>
+                <td class="col-no">175</td>
+                <td class="col-name">顶部导航-Telegram点击</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = {所在页面} # 比如public_home_page等
+ref_page_url={前页的url}
+element_pos=top_nav
+element_name=telegram</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;43de166d-dd25-4627-a71e-59c5de43a64b&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;00002aab-6656-43b3-930a-6ffdbcd4de70&quot;,
+    &quot;st_role_id&quot;: &quot;&quot;,
+    &quot;st_account_id&quot;: &quot;&quot;,
+    &quot;st_distinct_id&quot;: &quot;370a2735-bb50-44c2-9ab5-fc2c7ed5a68d&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784734631100,
+    &quot;st_event_datetime&quot;: &quot;2026-07-22 23:37:11&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODJPC02&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;ref_page_url&quot;: &quot;https://ya.ru/&quot;,
+    &quot;element_name&quot;: &quot;telegram&quot;,
+    &quot;current_page_name&quot;: &quot;public_home_page&quot;,
+    &quot;element_pos&quot;: &quot;top_nav&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODJPC02&amp;etext=2202.8LlL_gmfLWnXIumiSeExFEHHinuRj4i5kj-kiIYi_taPAZrAvY4RbarSMMjMBMbjDALFI7ypnItzq1KOIuehtNrLudv3nykr2fX3ijaHaW9tc3hkd3BmanhwcG9id2N4.adedd7ebbbfaa1359ed75c383fcced48d33f0416&amp;yclid=5548505165730414591&quot;,
+    &quot;extend&quot;: &quot;&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: public_home_page
+  ref_page_url: https://ya.ru/</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【current_page_url、extend】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">176</td>
+                <td class="col-name">限时折上折弹窗曝光</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_element_expose_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = {所在页面} # 比如public_home_page等
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name=limited_discount_popup_expose
+</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;b65ff1dd-a289-437c-b9a7-c7efcce3107a&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000c578-5fb2-40b7-9c05-e5f0108c29db&quot;,
+    &quot;st_role_id&quot;: &quot;&quot;,
+    &quot;st_account_id&quot;: &quot;&quot;,
+    &quot;st_distinct_id&quot;: &quot;dde90f05-215d-4845-8e0e-f9d7a912d0c1&quot;,
+    &quot;st_event_name&quot;: &quot;log_element_expose_client&quot;,
+    &quot;st_event_time&quot;: 1784768510212,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 09:01:50&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODFC002&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;element_name&quot;: &quot;limited_discount_popup_expose&quot;,
+    &quot;element_pos&quot;: &quot;middle_content&quot;,
+    &quot;current_page_name&quot;: &quot;public_home_page&quot;,
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/login&quot;,
+    &quot;element_module&quot;: &quot;limited_discount_popup&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODFC002&amp;etext=2202.xDrkkCeimUSIBUE5ZnWpPVoThb0cej4Jx0bZ88DauXPKOBST2GDJPHJHhv2NkTQQQjvlFDYxQ0G2Flvx9fC-5Xd5ZGFqbWxxaXRpeWZ6ZGc.7daf6ca2e339afaa596a0773f32129b1753f4f5b&amp;yclid=15753272147468091391&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: home_page、public_home_page
+  ref_page_url: 、http://away.vk.ru/、https://ads-captcha.yandex.ru/、https://away.vk.ru/、https://chatgpt.com/、https://e.mail.ru/、https://mail.ru/、https://odirouter.ai/、https://odirouter.ai/dashboard/account、https://odirouter.ai/dashboard/api-keys、https://odirouter.ai/dashboard/credits、https://odirouter.ai/dashboard/home、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/models/free-grok-4~dot~5?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models/free-kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models/free-kimi-k3?category=Video&amp;kind=multi、https://odirouter.ai/dashboard/models/kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models?category=Featured、https://odirouter.ai/dashboard/models?category=Free、https://odirouter.ai/dashboard/playground</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">177</td>
+                <td class="col-name">限时折上折弹窗点击</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = {所在页面} # 比如public_home_page等
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name={点击什么报什么} # go_see_now、close</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;89391ddc-6996-437d-ade6-24ed51a19f6d&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;000054f8-89e2-4d44-9fab-e4c26a062b64&quot;,
+    &quot;st_role_id&quot;: &quot;u_f82c6082f504ed95&quot;,
+    &quot;st_account_id&quot;: &quot;u_f82c6082f504ed95&quot;,
+    &quot;st_distinct_id&quot;: &quot;e7538d5f-1419-4156-b0b4-519468bc7718&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784763033674,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 07:30:33&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODFC011&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;current_page_name&quot;: &quot;home_page&quot;,
+    &quot;element_module&quot;: &quot;limited_discount_popup&quot;,
+    &quot;element_name&quot;: &quot;go_see_now&quot;,
+    &quot;element_pos&quot;: &quot;middle_content&quot;,
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/dashboard/models&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/home&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: home_page、public_home_page
+  ref_page_url: 、http://away.vk.ru/、https://away.vk.ru/、https://e.mail.ru/、https://mail.ru/、https://odirouter.ai/dashboard/account、https://odirouter.ai/dashboard/api-keys、https://odirouter.ai/dashboard/credits、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/playground、https://odirouter.ai/dashboard/playground?model=free-gemini-3.1-pro-preview、https://odirouter.ai/dashboard/usage、https://odirouter.ai/docs/api-reference/model-api/black-forest-labs/flux-2-pro、https://odirouter.ai/docs/get-started/introduction、https://odirouter.ai/docs/get-started/quick-start、https://odirouter.ai/login、https://odirouter.ai/login?callbackUrl=%2Fdashboard%2Fhome、https://odirouter.ai/models/kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/models?category=Featured、https://odirouter.ai/openrouter?utm_source=yandex&amp;ad=RUYDXODFC011&amp;etext=2202.VjXS01O3Sdj-xNk5k3NgkHFpcXh4ZGptcnRybXRndGY.e961518d05e8912305fa4537ad0d5ab943469af0&amp;yclid=13475169897824911359
+  element_name: close、go_see_now</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">178</td>
+                <td class="col-name">模型详情页-新增Quick start点击</td>
+                <td class="col-spec">model_detail_page</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">
+current_page_name = model_detail_page
+model_id={模型id}
+ref_page_url={前页的url}
+element_name={点击啥上报啥}  # quick start、try model、over view、playground、api、create api key、copy、input、send等</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;010702cc-79df-496b-b0a3-207e12ef2a5e&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000490c-8d42-4e6c-8e6c-f44d5ed1b95a&quot;,
+    &quot;st_role_id&quot;: &quot;u_b0b9796b429c5f47&quot;,
+    &quot;st_account_id&quot;: &quot;u_b0b9796b429c5f47&quot;,
+    &quot;st_distinct_id&quot;: &quot;971f8375-adb4-4d33-80c7-10931de8b3cc&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784765444085,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 08:10:44&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODJPC10&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;current_page_name&quot;: &quot;model_detail_page&quot;,
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/dashboard/models&quot;,
+    &quot;element_name&quot;: &quot;quick start&quot;,
+    &quot;model_id&quot;: &quot;free-kimi-k3&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/models/free-kimi-k3?category=LLM&amp;kind=llm&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  model_id: claude-fable-5、free-claude-opus-4-7、free-claude-opus-4-8、free-claude-sonnet-4-6、free-gemini-2.5-flash、free-gemini-3-flash-preview、free-gemini-3.1-pro-preview、free-gemini-3.5-flash、free-glm-5.2、free-gpt-5.5、free-gpt-image-2、free-grok-4.5、free-kimi-k3、free-nano-banana-2、gemini-3.1-flash-tts-preview、gemini-3.6-flash、glm-5.2、gpt-5.5、gpt-5.6-luna、gpt-5.6-sol
+  ref_page_url: 、https://odirouter.ai/?&amp;ad=RUVKODI00032&amp;rb_clickid=228236882-1784706207-860228677-0-ceb501193eb605cb34a4e14a60c85e126a60749fb1ae3c27e634771ee0814824b81be264db5ca8a2&amp;utm_campaign=146405250&amp;utm_content=228236882&amp;utm_medium=cpa&amp;utm_source=vk_ads、https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODFC001&amp;etext=2202.xN-FDRI6UgJ7pHeOHfehZ2rSueLyR4BzNJZUi0QKJyb6EYDsqE8VKVReUYVd2zdf79LjFN_Ahot_dTLctoo5nzMReDBWemc8gIUh_bYg6drXvZ25UbgtyMu6elbpRUqrcmVzeG96cXFvcmZwbmJ0Yg.fab7823e38c9ac8ba0434876996f0dd50f91c512&amp;yclid=12207791212506906623、https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODFC002&amp;etext=2202.j8fIKNqEe7pK9UQ-CuLvAJPE5wyrKcVmt7d03_PA2YyXo1SfPtHlCHONJ0id18BRdmFzcGdqbWFmYnFiaW12aw.93b51b87c908ebde8fe9e2840d1d103e87758c38&amp;yclid=1531615759639773183、https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODJPC02&amp;etext=2202.jbCCWkH7yjC5IXATLTLHj39wBjgk1EDgcPheSHOOrRNoZNY2_j5Azq-mGmqKkhT3hpBZuiEnwljNQah2-WpxGogGu91n8DImASFygqUrM1FqbXZzYnJka2JubWRlbnZk.f0c9da8b22033f7f4d4c6dfe8d32f20e9c8e371e&amp;yclid=996527130873692159、https://odirouter.ai/dashboard/api-keys、https://odirouter.ai/dashboard/home、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/models/free-gpt-image-2?category=Image&amp;kind=multi、https://odirouter.ai/dashboard/models/free-grok-4~dot~5?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models?category=Audio、https://odirouter.ai/dashboard/models?category=Free、https://odirouter.ai/dashboard/models?category=LLM、https://odirouter.ai/dashboard/models?category=Video、https://odirouter.ai/dashboard/playground、https://odirouter.ai/dashboard/playground?model=free-gpt-5.5、https://odirouter.ai/dashboard/playground?model=free-gpt-image-2、https://odirouter.ai/dashboard/playground?model=free-grok-4.5、https://odirouter.ai/dashboard/playground?model=free-kimi-k3、https://odirouter.ai/dashboard/playground?model=gemini-3.1-flash-tts-preview
+  element_name: API Keys、Close promo、Credits、Docs、Earn More Credits、GPT Image 2、GPT Image 2 (бесплатная)、Grok 4.5 (бесплатная)、Home、Kimi K3、Kimi K3 (бесплатная)、Models、OdiRouter、OpenRouter、Playground、Pricing、Request Logs、Sign in、Sign out、Usage</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">179</td>
+                <td class="col-name">首页-开始使用文档卡片点击</td>
+                <td class="col-spec">home_page</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=get_started_docs
+element_name={点击什么报什么} # quick_start（快速启动）、integration（整合）、support（支持）</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;0becc0a8-cb37-41c7-a887-7caafe6af33c&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000c05a-e34b-454a-8ea3-76112994eba9&quot;,
+    &quot;st_role_id&quot;: &quot;u_54e32c839e60b606&quot;,
+    &quot;st_account_id&quot;: &quot;u_54e32c839e60b606&quot;,
+    &quot;st_distinct_id&quot;: &quot;4cb4a247-e8a0-4557-9667-358d356e612e&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784751720640,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 04:22:00&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODJPC02&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;ref_page_url&quot;: &quot;https://yandex.ru/&quot;,
+    &quot;element_module&quot;: &quot;get_started_docs&quot;,
+    &quot;current_page_name&quot;: &quot;home_page&quot;,
+    &quot;element_pos&quot;: &quot;middle_content&quot;,
+    &quot;element_name&quot;: &quot;quick_start&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/home&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  ref_page_url: https://odirouter.ai/dashboard/credits、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/models/free-grok-4~dot~5?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models/kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/playground、https://odirouter.ai/dashboard/request-logs、https://odirouter.ai/openrouter?utm_source=yandex&amp;ad=RUYDXODJPC11&amp;etext=2202.pr-A_xCVhMpyZW7WMRpb7q9ZsC4_QIytTYou8Rqeyj5EI25TNn3a0RGpKNNh4-sjOoNQn43nWhA8qcG2Zy1cyw3lLsvbN5lSM6Ku651cq69xNxxzxpRgKRtfp9AFbYxKdHVvY29wY3ZiZ2FxemVucA.6d0a48f3bb03ba4d9d7aa0086334542637e691d3&amp;yclid=15434836101019992063、https://yandex.ru/
+  element_name: integration、quick_start、support</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">180</td>
+                <td class="col-name">加入付费候补名单成功提示弹窗上点击</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">
+current_page_name = {所在页面} # 比如home_page等
+ref_page_url={前页的url}
+element_module=join_paid_waitlist_success
+element_name={点什么报什么} # 比如join等，能点击的都上报
+
+</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;16327321-983a-4199-8b2e-bacd86a0bf59&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000b9fe-ddc3-4892-a05e-3c5c24538af1&quot;,
+    &quot;st_role_id&quot;: &quot;u_df6996ff76f3167a&quot;,
+    &quot;st_account_id&quot;: &quot;u_df6996ff76f3167a&quot;,
+    &quot;st_distinct_id&quot;: &quot;94634b3b-024c-41f8-840b-2b2d3e4dfd26&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784745870817,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 02:44:30&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/dashboard/home&quot;,
+    &quot;element_module&quot;: &quot;join_paid_waitlist_success&quot;,
+    &quot;element_name&quot;: &quot;close&quot;,
+    &quot;current_page_name&quot;: &quot;credits_page&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/credits&quot;,
+    &quot;extend&quot;: &quot;&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: credits_page、request_log_page
+  ref_page_url: 、https://odirouter.ai/dashboard/account、https://odirouter.ai/dashboard/home
+  element_name: close、join</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【current_page_url、extend】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+        </table>
+        </div>
+        </div>
+        <div id="tab-ok-compliant" class="tab-panel">
+        <div class="table-wrap">
+        <table>
+            
+            <colgroup>
+                <col style="width: 48px">
+                <col style="width: 130px">
+                <col style="width: 110px">
+                <col style="width: 128px">
+                <col style="width: 320px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+            </colgroup>
+            <tr>
+                <th class="col-no">序号</th>
+                <th class="col-name">埋点信息</th>
+                <th class="col-spec">页面标识</th>
+                <th class="col-event">埋点事件</th>
+                <th class="col-param">上报参数详情</th>
+                <th class="col-status">是否上报</th>
+                <th class="col-status">是否入库</th>
+                <th class="col-status">是否合规</th>
+                <th class="col-case">入库案例</th>
+                <th class="col-error">入库错误原因或警告</th>
+                <th class="col-case">错误案例</th>
+            </tr>
+            
+            <tr>
+                <td class="col-no">175</td>
+                <td class="col-name">顶部导航-Telegram点击</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = {所在页面} # 比如public_home_page等
+ref_page_url={前页的url}
+element_pos=top_nav
+element_name=telegram</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;43de166d-dd25-4627-a71e-59c5de43a64b&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;00002aab-6656-43b3-930a-6ffdbcd4de70&quot;,
+    &quot;st_role_id&quot;: &quot;&quot;,
+    &quot;st_account_id&quot;: &quot;&quot;,
+    &quot;st_distinct_id&quot;: &quot;370a2735-bb50-44c2-9ab5-fc2c7ed5a68d&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784734631100,
+    &quot;st_event_datetime&quot;: &quot;2026-07-22 23:37:11&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODJPC02&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;ref_page_url&quot;: &quot;https://ya.ru/&quot;,
+    &quot;element_name&quot;: &quot;telegram&quot;,
+    &quot;current_page_name&quot;: &quot;public_home_page&quot;,
+    &quot;element_pos&quot;: &quot;top_nav&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODJPC02&amp;etext=2202.8LlL_gmfLWnXIumiSeExFEHHinuRj4i5kj-kiIYi_taPAZrAvY4RbarSMMjMBMbjDALFI7ypnItzq1KOIuehtNrLudv3nykr2fX3ijaHaW9tc3hkd3BmanhwcG9id2N4.adedd7ebbbfaa1359ed75c383fcced48d33f0416&amp;yclid=5548505165730414591&quot;,
+    &quot;extend&quot;: &quot;&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: public_home_page
+  ref_page_url: https://ya.ru/</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【current_page_url、extend】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">176</td>
+                <td class="col-name">限时折上折弹窗曝光</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_element_expose_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = {所在页面} # 比如public_home_page等
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name=limited_discount_popup_expose
+</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;b65ff1dd-a289-437c-b9a7-c7efcce3107a&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000c578-5fb2-40b7-9c05-e5f0108c29db&quot;,
+    &quot;st_role_id&quot;: &quot;&quot;,
+    &quot;st_account_id&quot;: &quot;&quot;,
+    &quot;st_distinct_id&quot;: &quot;dde90f05-215d-4845-8e0e-f9d7a912d0c1&quot;,
+    &quot;st_event_name&quot;: &quot;log_element_expose_client&quot;,
+    &quot;st_event_time&quot;: 1784768510212,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 09:01:50&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODFC002&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;element_name&quot;: &quot;limited_discount_popup_expose&quot;,
+    &quot;element_pos&quot;: &quot;middle_content&quot;,
+    &quot;current_page_name&quot;: &quot;public_home_page&quot;,
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/login&quot;,
+    &quot;element_module&quot;: &quot;limited_discount_popup&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODFC002&amp;etext=2202.xDrkkCeimUSIBUE5ZnWpPVoThb0cej4Jx0bZ88DauXPKOBST2GDJPHJHhv2NkTQQQjvlFDYxQ0G2Flvx9fC-5Xd5ZGFqbWxxaXRpeWZ6ZGc.7daf6ca2e339afaa596a0773f32129b1753f4f5b&amp;yclid=15753272147468091391&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: home_page、public_home_page
+  ref_page_url: 、http://away.vk.ru/、https://ads-captcha.yandex.ru/、https://away.vk.ru/、https://chatgpt.com/、https://e.mail.ru/、https://mail.ru/、https://odirouter.ai/、https://odirouter.ai/dashboard/account、https://odirouter.ai/dashboard/api-keys、https://odirouter.ai/dashboard/credits、https://odirouter.ai/dashboard/home、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/models/free-grok-4~dot~5?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models/free-kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models/free-kimi-k3?category=Video&amp;kind=multi、https://odirouter.ai/dashboard/models/kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models?category=Featured、https://odirouter.ai/dashboard/models?category=Free、https://odirouter.ai/dashboard/playground</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">177</td>
+                <td class="col-name">限时折上折弹窗点击</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = {所在页面} # 比如public_home_page等
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=limited_discount_popup
+element_name={点击什么报什么} # go_see_now、close</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;89391ddc-6996-437d-ade6-24ed51a19f6d&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;000054f8-89e2-4d44-9fab-e4c26a062b64&quot;,
+    &quot;st_role_id&quot;: &quot;u_f82c6082f504ed95&quot;,
+    &quot;st_account_id&quot;: &quot;u_f82c6082f504ed95&quot;,
+    &quot;st_distinct_id&quot;: &quot;e7538d5f-1419-4156-b0b4-519468bc7718&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784763033674,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 07:30:33&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODFC011&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;current_page_name&quot;: &quot;home_page&quot;,
+    &quot;element_module&quot;: &quot;limited_discount_popup&quot;,
+    &quot;element_name&quot;: &quot;go_see_now&quot;,
+    &quot;element_pos&quot;: &quot;middle_content&quot;,
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/dashboard/models&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/home&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: home_page、public_home_page
+  ref_page_url: 、http://away.vk.ru/、https://away.vk.ru/、https://e.mail.ru/、https://mail.ru/、https://odirouter.ai/dashboard/account、https://odirouter.ai/dashboard/api-keys、https://odirouter.ai/dashboard/credits、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/playground、https://odirouter.ai/dashboard/playground?model=free-gemini-3.1-pro-preview、https://odirouter.ai/dashboard/usage、https://odirouter.ai/docs/api-reference/model-api/black-forest-labs/flux-2-pro、https://odirouter.ai/docs/get-started/introduction、https://odirouter.ai/docs/get-started/quick-start、https://odirouter.ai/login、https://odirouter.ai/login?callbackUrl=%2Fdashboard%2Fhome、https://odirouter.ai/models/kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/models?category=Featured、https://odirouter.ai/openrouter?utm_source=yandex&amp;ad=RUYDXODFC011&amp;etext=2202.VjXS01O3Sdj-xNk5k3NgkHFpcXh4ZGptcnRybXRndGY.e961518d05e8912305fa4537ad0d5ab943469af0&amp;yclid=13475169897824911359
+  element_name: close、go_see_now</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">178</td>
+                <td class="col-name">模型详情页-新增Quick start点击</td>
+                <td class="col-spec">model_detail_page</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">
+current_page_name = model_detail_page
+model_id={模型id}
+ref_page_url={前页的url}
+element_name={点击啥上报啥}  # quick start、try model、over view、playground、api、create api key、copy、input、send等</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;010702cc-79df-496b-b0a3-207e12ef2a5e&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000490c-8d42-4e6c-8e6c-f44d5ed1b95a&quot;,
+    &quot;st_role_id&quot;: &quot;u_b0b9796b429c5f47&quot;,
+    &quot;st_account_id&quot;: &quot;u_b0b9796b429c5f47&quot;,
+    &quot;st_distinct_id&quot;: &quot;971f8375-adb4-4d33-80c7-10931de8b3cc&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784765444085,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 08:10:44&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODJPC10&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;current_page_name&quot;: &quot;model_detail_page&quot;,
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/dashboard/models&quot;,
+    &quot;element_name&quot;: &quot;quick start&quot;,
+    &quot;model_id&quot;: &quot;free-kimi-k3&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/models/free-kimi-k3?category=LLM&amp;kind=llm&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  model_id: claude-fable-5、free-claude-opus-4-7、free-claude-opus-4-8、free-claude-sonnet-4-6、free-gemini-2.5-flash、free-gemini-3-flash-preview、free-gemini-3.1-pro-preview、free-gemini-3.5-flash、free-glm-5.2、free-gpt-5.5、free-gpt-image-2、free-grok-4.5、free-kimi-k3、free-nano-banana-2、gemini-3.1-flash-tts-preview、gemini-3.6-flash、glm-5.2、gpt-5.5、gpt-5.6-luna、gpt-5.6-sol
+  ref_page_url: 、https://odirouter.ai/?&amp;ad=RUVKODI00032&amp;rb_clickid=228236882-1784706207-860228677-0-ceb501193eb605cb34a4e14a60c85e126a60749fb1ae3c27e634771ee0814824b81be264db5ca8a2&amp;utm_campaign=146405250&amp;utm_content=228236882&amp;utm_medium=cpa&amp;utm_source=vk_ads、https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODFC001&amp;etext=2202.xN-FDRI6UgJ7pHeOHfehZ2rSueLyR4BzNJZUi0QKJyb6EYDsqE8VKVReUYVd2zdf79LjFN_Ahot_dTLctoo5nzMReDBWemc8gIUh_bYg6drXvZ25UbgtyMu6elbpRUqrcmVzeG96cXFvcmZwbmJ0Yg.fab7823e38c9ac8ba0434876996f0dd50f91c512&amp;yclid=12207791212506906623、https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODFC002&amp;etext=2202.j8fIKNqEe7pK9UQ-CuLvAJPE5wyrKcVmt7d03_PA2YyXo1SfPtHlCHONJ0id18BRdmFzcGdqbWFmYnFiaW12aw.93b51b87c908ebde8fe9e2840d1d103e87758c38&amp;yclid=1531615759639773183、https://odirouter.ai/?utm_source=yandex&amp;ad=RUYDXODJPC02&amp;etext=2202.jbCCWkH7yjC5IXATLTLHj39wBjgk1EDgcPheSHOOrRNoZNY2_j5Azq-mGmqKkhT3hpBZuiEnwljNQah2-WpxGogGu91n8DImASFygqUrM1FqbXZzYnJka2JubWRlbnZk.f0c9da8b22033f7f4d4c6dfe8d32f20e9c8e371e&amp;yclid=996527130873692159、https://odirouter.ai/dashboard/api-keys、https://odirouter.ai/dashboard/home、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/models/free-gpt-image-2?category=Image&amp;kind=multi、https://odirouter.ai/dashboard/models/free-grok-4~dot~5?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models?category=Audio、https://odirouter.ai/dashboard/models?category=Free、https://odirouter.ai/dashboard/models?category=LLM、https://odirouter.ai/dashboard/models?category=Video、https://odirouter.ai/dashboard/playground、https://odirouter.ai/dashboard/playground?model=free-gpt-5.5、https://odirouter.ai/dashboard/playground?model=free-gpt-image-2、https://odirouter.ai/dashboard/playground?model=free-grok-4.5、https://odirouter.ai/dashboard/playground?model=free-kimi-k3、https://odirouter.ai/dashboard/playground?model=gemini-3.1-flash-tts-preview
+  element_name: API Keys、Close promo、Credits、Docs、Earn More Credits、GPT Image 2、GPT Image 2 (бесплатная)、Grok 4.5 (бесплатная)、Home、Kimi K3、Kimi K3 (бесплатная)、Models、OdiRouter、OpenRouter、Playground、Pricing、Request Logs、Sign in、Sign out、Usage</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">179</td>
+                <td class="col-name">首页-开始使用文档卡片点击</td>
+                <td class="col-spec">home_page</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">current_page_name = home_page
+ref_page_url={前页的url}
+element_pos=middle_content
+element_module=get_started_docs
+element_name={点击什么报什么} # quick_start（快速启动）、integration（整合）、support（支持）</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;0becc0a8-cb37-41c7-a887-7caafe6af33c&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000c05a-e34b-454a-8ea3-76112994eba9&quot;,
+    &quot;st_role_id&quot;: &quot;u_54e32c839e60b606&quot;,
+    &quot;st_account_id&quot;: &quot;u_54e32c839e60b606&quot;,
+    &quot;st_distinct_id&quot;: &quot;4cb4a247-e8a0-4557-9667-358d356e612e&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784751720640,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 04:22:00&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;RUYDXODJPC02&quot;,
+    &quot;utm_source&quot;: &quot;yandex&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;ref_page_url&quot;: &quot;https://yandex.ru/&quot;,
+    &quot;element_module&quot;: &quot;get_started_docs&quot;,
+    &quot;current_page_name&quot;: &quot;home_page&quot;,
+    &quot;element_pos&quot;: &quot;middle_content&quot;,
+    &quot;element_name&quot;: &quot;quick_start&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;extend&quot;: &quot;&quot;,
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/home&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  ref_page_url: https://odirouter.ai/dashboard/credits、https://odirouter.ai/dashboard/models、https://odirouter.ai/dashboard/models/free-grok-4~dot~5?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/models/kimi-k3?category=LLM&amp;kind=llm、https://odirouter.ai/dashboard/playground、https://odirouter.ai/dashboard/request-logs、https://odirouter.ai/openrouter?utm_source=yandex&amp;ad=RUYDXODJPC11&amp;etext=2202.pr-A_xCVhMpyZW7WMRpb7q9ZsC4_QIytTYou8Rqeyj5EI25TNn3a0RGpKNNh4-sjOoNQn43nWhA8qcG2Zy1cyw3lLsvbN5lSM6Ku651cq69xNxxzxpRgKRtfp9AFbYxKdHVvY29wY3ZiZ2FxemVucA.6d0a48f3bb03ba4d9d7aa0086334542637e691d3&amp;yclid=15434836101019992063、https://yandex.ru/
+  element_name: integration、quick_start、support</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【extend、current_page_url】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+            <tr>
+                <td class="col-no">180</td>
+                <td class="col-name">加入付费候补名单成功提示弹窗上点击</td>
+                <td class="col-spec">—</td>
+                <td class="col-event">log_click_client</td>
+                <td class="col-param"><pre class="spec-detail">
+current_page_name = {所在页面} # 比如home_page等
+ref_page_url={前页的url}
+element_module=join_paid_waitlist_success
+element_name={点什么报什么} # 比如join等，能点击的都上报
+
+</pre></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-status"><span class="yes">✅ 是</span></td>
+                <td class="col-case"><div class="scroll-box case-box"><pre class="case-json">{
+  &quot;预置属性和公共属性&quot;: {
+    &quot;st_pk_id&quot;: &quot;16327321-983a-4199-8b2e-bacd86a0bf59&quot;,
+    &quot;st_status&quot;: &quot;1&quot;,
+    &quot;st_user_id&quot;: &quot;0000b9fe-ddc3-4892-a05e-3c5c24538af1&quot;,
+    &quot;st_role_id&quot;: &quot;u_df6996ff76f3167a&quot;,
+    &quot;st_account_id&quot;: &quot;u_df6996ff76f3167a&quot;,
+    &quot;st_distinct_id&quot;: &quot;94634b3b-024c-41f8-840b-2b2d3e4dfd26&quot;,
+    &quot;st_event_name&quot;: &quot;log_click_client&quot;,
+    &quot;st_event_time&quot;: 1784745870817,
+    &quot;st_event_datetime&quot;: &quot;2026-07-23 02:44:30&quot;,
+    &quot;platform_type&quot;: &quot;web&quot;,
+    &quot;adid&quot;: &quot;&quot;
+  },
+  &quot;业务属性&quot;: {
+    &quot;ref_page_url&quot;: &quot;https://odirouter.ai/dashboard/home&quot;,
+    &quot;element_module&quot;: &quot;join_paid_waitlist_success&quot;,
+    &quot;element_name&quot;: &quot;close&quot;,
+    &quot;current_page_name&quot;: &quot;credits_page&quot;
+  },
+  &quot;多余参数（方案未定义）&quot;: {
+    &quot;current_page_url&quot;: &quot;https://odirouter.ai/dashboard/credits&quot;,
+    &quot;extend&quot;: &quot;&quot;
+  }
+}
+
+═══ 动态参数取值（最多20条） ═══
+  current_page_name: credits_page、request_log_page
+  ref_page_url: 、https://odirouter.ai/dashboard/account、https://odirouter.ai/dashboard/home
+  element_name: close、join</pre></div></td>
+                <td class="col-error"><div class="scroll-box error-box"><div class="error-text">警告：参数【current_page_url、extend】上报参数详情中不要求上报</div></div></td>
+                <td class="col-case"><div class="scroll-box case-box"><div class="empty-text">无</div></div></td>
+            </tr>
+        </table>
+        </div>
+        </div>
+        <div id="tab-ok-non-compliant" class="tab-panel">
+        <div class="table-wrap">
+        <table>
+            
+            <colgroup>
+                <col style="width: 48px">
+                <col style="width: 130px">
+                <col style="width: 110px">
+                <col style="width: 128px">
+                <col style="width: 320px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+            </colgroup>
+            <tr>
+                <th class="col-no">序号</th>
+                <th class="col-name">埋点信息</th>
+                <th class="col-spec">页面标识</th>
+                <th class="col-event">埋点事件</th>
+                <th class="col-param">上报参数详情</th>
+                <th class="col-status">是否上报</th>
+                <th class="col-status">是否入库</th>
+                <th class="col-status">是否合规</th>
+                <th class="col-case">入库案例</th>
+                <th class="col-error">入库错误原因或警告</th>
+                <th class="col-case">错误案例</th>
+            </tr>
+        </table>
+        </div>
+        <div class="tab-empty">暂无已上报已入库不合规的点位</div>
+        </div>
+        <div id="tab-reported-not-stored" class="tab-panel">
+        <div class="table-wrap">
+        <table>
+            
+            <colgroup>
+                <col style="width: 48px">
+                <col style="width: 130px">
+                <col style="width: 110px">
+                <col style="width: 128px">
+                <col style="width: 320px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+            </colgroup>
+            <tr>
+                <th class="col-no">序号</th>
+                <th class="col-name">埋点信息</th>
+                <th class="col-spec">页面标识</th>
+                <th class="col-event">埋点事件</th>
+                <th class="col-param">上报参数详情</th>
+                <th class="col-status">是否上报</th>
+                <th class="col-status">是否入库</th>
+                <th class="col-status">是否合规</th>
+                <th class="col-case">入库案例</th>
+                <th class="col-error">入库错误原因或警告</th>
+                <th class="col-case">错误案例</th>
+            </tr>
+        </table>
+        </div>
+        <div class="tab-empty">暂无已上报未入库的点位</div>
+        </div>
+        <div id="tab-not-reported" class="tab-panel">
+        <div class="table-wrap">
+        <table>
+            
+            <colgroup>
+                <col style="width: 48px">
+                <col style="width: 130px">
+                <col style="width: 110px">
+                <col style="width: 128px">
+                <col style="width: 320px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 72px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+                <col style="width: 510px">
+            </colgroup>
+            <tr>
+                <th class="col-no">序号</th>
+                <th class="col-name">埋点信息</th>
+                <th class="col-spec">页面标识</th>
+                <th class="col-event">埋点事件</th>
+                <th class="col-param">上报参数详情</th>
+                <th class="col-status">是否上报</th>
+                <th class="col-status">是否入库</th>
+                <th class="col-status">是否合规</th>
+                <th class="col-case">入库案例</th>
+                <th class="col-error">入库错误原因或警告</th>
+                <th class="col-case">错误案例</th>
+            </tr>
+        </table>
+        </div>
+        <div class="tab-empty">暂无未上报的点位</div>
+        </div>
+        <div class="footer">验证时间：2026-07-23 09:35:25<br>埋点方案：/Users/mac122/Desktop/luoyx/track/海艺/odirouter/20260720/埋点方案与开发计划.xlsx<br>测试数据：/Users/mac122/Desktop/luoyx/track/海艺/odirouter/20260720/data.csv</div>
+    </div>
+    <script>
+    (function () {
+        var buttons = document.querySelectorAll('.tab-btn');
+        var panels = document.querySelectorAll('.tab-panel');
+        buttons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var target = btn.getAttribute('data-tab');
+                buttons.forEach(function (b) { b.classList.remove('active'); });
+                panels.forEach(function (p) { p.classList.remove('active'); });
+                btn.classList.add('active');
+                var panel = document.getElementById(target);
+                if (panel) panel.classList.add('active');
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

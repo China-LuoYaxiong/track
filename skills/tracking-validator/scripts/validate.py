@@ -15,8 +15,18 @@ import html as html_module
 import pandas as pd
 from datetime import datetime
 
-# 系统预置参数（不检查）
-SYSTEM_PARAMS = ['extend', 'adid', 'current_page_url', 'platform_type']
+# 预置属性（st_ 开头，可硬编码，不参与多余参数校验）
+PRESET_ST_PARAMS = [
+    'st_role_id',
+    'st_account_id',
+    'st_distinct_id',
+    'st_event_name',
+    'st_event_time',
+]
+
+# 完整白名单 = PRESET_ST_PARAMS + Excel「预置属性和公共属性」中的非 st_ 公共属性
+# 运行时由 apply_system_params_from_excel 写入
+SYSTEM_PARAMS = list(PRESET_ST_PARAMS)
 
 # 「上报参数详情」注释中表示可选参数的短语（可出现在描述性注释任意位置）
 OPTIONAL_PARAM_COMMENT_PHRASES = [
@@ -33,10 +43,11 @@ OPTIONAL_PARAM_COMMENT_STANDALONE = [
     r'^选填[，,；;]',
 ]
 
-# 预置属性和公共属性字段
-PRESET_FIELDS = ['st_pk_id', 'st_status', 'st_user_id', 'st_role_id', 'st_account_id', 
-                 'st_distinct_id', 'st_event_name', 'st_event_time', 'st_event_datetime',
-                 'platform_type', 'adid']
+# 报告展示用：事件信封字段（非 Excel 业务白名单；与「多余参数」校验无关）
+REPORT_ENVELOPE_FIELDS = [
+    'st_pk_id', 'st_status', 'st_user_id', 'st_role_id', 'st_account_id',
+    'st_distinct_id', 'st_event_name', 'st_event_time', 'st_event_datetime',
+]
 
 # 测试数据 CSV 必需列（用户提供时仅需这 5 列）
 REQUIRED_CSV_COLUMNS = [
@@ -77,7 +88,7 @@ def assert_user_input_files(excel_file, csv_file):
 
 def assert_csv_columns(csv_file):
     """校验 CSV 包含验证所需的 5 列。"""
-    with open(csv_file, 'r', encoding='utf-8') as f:
+    with open(csv_file, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         if not reader.fieldnames:
             print('错误：CSV 文件为空或缺少表头。')
@@ -104,6 +115,47 @@ def event_time_value(record):
     except (TypeError, ValueError):
         return 0
 
+def normalize_event_time_ms(st_event_time):
+    """将 st_event_time 统一为毫秒时间戳；无法解析时返回 0。"""
+    try:
+        ts = int(st_event_time or 0)
+    except (TypeError, ValueError):
+        return 0
+    if ts <= 0:
+        return 0
+    # 秒级（约 10 位）转毫秒
+    if ts < 10 ** 12:
+        ts *= 1000
+    return ts
+
+def get_validation_now_ms():
+    """检验时刻（脚本执行时的当前时间），毫秒。"""
+    return int(datetime.now().timestamp() * 1000)
+
+def is_not_future_event(record, now_ms=None):
+    """
+    事件时间不超过检验时刻则可用于「取最新」判定。
+    无法解析时间时不因「未来」排除（避免误伤脏数据）。
+    """
+    if now_ms is None:
+        now_ms = get_validation_now_ms()
+    ts = normalize_event_time_ms(record.get('st_event_time'))
+    if ts <= 0:
+        return True
+    return ts <= now_ms
+
+def filter_not_future_records(results, now_ms=None):
+    """排除 st_event_time 晚于检验时刻的记录。"""
+    if now_ms is None:
+        now_ms = get_validation_now_ms()
+    return [r for r in results if is_not_future_event(r, now_ms)]
+
+def count_future_records(results, now_ms=None):
+    """统计事件时间为未来的候选条数。"""
+    if now_ms is None:
+        now_ms = get_validation_now_ms()
+    return sum(1 for r in results if not is_not_future_event(r, now_ms))
+
 def extract_event_datetime(raw_message, csv_row=None):
     """从 st_available_message 或 st_event_time 提取可读时间。"""
     if csv_row:
@@ -128,15 +180,23 @@ def extract_event_datetime(raw_message, csv_row=None):
 
     return ''
 
-def get_latest_record(results):
-    """每个点位仅取最新一条匹配记录作为判定依据。"""
-    if not results:
+def get_latest_record(results, now_ms=None):
+    """
+    每个点位取最新一条匹配记录作为判定依据。
+    仅在 st_event_time <= 检验时刻 的候选中取最新，排除未来时间脏数据。
+    """
+    eligible = filter_not_future_records(results, now_ms)
+    if not eligible:
         return None
-    return max(results, key=event_time_value)
+    return max(eligible, key=event_time_value)
 
-def get_latest_stored_record(results):
-    """取最新一条已入库（st_status=1）的匹配记录，用于入库案例与入库错误原因或警告。"""
-    stored = [r for r in results if str(r.get('st_status', '')) == '1']
+def get_latest_stored_record(results, now_ms=None):
+    """
+    取最新一条已入库（st_status=1）的匹配记录，用于入库案例与入库错误原因或警告。
+    同样排除事件时间晚于检验时刻的记录。
+    """
+    eligible = filter_not_future_records(results, now_ms)
+    stored = [r for r in eligible if str(r.get('st_status', '')) == '1']
     if not stored:
         return None
     return max(stored, key=event_time_value)
@@ -169,6 +229,61 @@ def normalize_page_identifier(value):
     if page.lower() in ('nan', 'none', ''):
         return ''
     return page
+
+def parse_common_attrs_from_excel(excel_file):
+    """
+    从 Excel「预置属性和公共属性」Sheet 读取「公共属性」名称。
+    规则：
+    - st_role_id / st_account_id / st_distinct_id / st_event_name / st_event_time 为预置属性，脚本硬编码，不依赖本函数
+    - Sheet 中其余属性（如 platform_type、adid、utm_source、channel）必须从 Excel 获取
+    - Sheet 里若也写了上述 5 个 st_ 预置属性，读取时跳过（避免重复）
+    """
+    try:
+        df = pd.read_excel(excel_file, sheet_name='预置属性和公共属性')
+    except (ValueError, KeyError) as e:
+        print(f'错误：无法读取 Excel「预置属性和公共属性」Sheet: {e}')
+        sys.exit(1)
+
+    name_col = None
+    for col in df.columns:
+        if str(col).strip() in ('属性名称', '属性名', '参数名称', '参数名'):
+            name_col = col
+            break
+    if name_col is None and len(df.columns) > 0:
+        name_col = df.columns[0]
+
+    if name_col is None:
+        print('错误：Excel「预置属性和公共属性」Sheet 无可用列')
+        sys.exit(1)
+
+    preset_st_set = set(PRESET_ST_PARAMS)
+    names = []
+    for val in df[name_col].dropna():
+        name = str(val).strip()
+        if not name or name.lower() == 'nan':
+            continue
+        if name in preset_st_set:
+            continue  # 预置 st_ 属性由硬编码承担
+        names.append(name)
+    # 去重且保序
+    seen = set()
+    unique = []
+    for n in names:
+        if n not in seen:
+            seen.add(n)
+            unique.append(n)
+    return unique
+
+
+def apply_system_params_from_excel(excel_file):
+    """
+    SYSTEM_PARAMS = 硬编码预置 st_ 属性 + Excel 公共属性（非 st_ 部分）。
+    """
+    global SYSTEM_PARAMS
+    common = parse_common_attrs_from_excel(excel_file)
+    SYSTEM_PARAMS = list(PRESET_ST_PARAMS) + common
+    return SYSTEM_PARAMS, common
+
 
 def parse_excel_tracking_plan(excel_file, target_numbers):
     """
@@ -476,7 +591,7 @@ def analyze_tracking_data(
     """
     results = []
     
-    with open(csv_file, 'r', encoding='utf-8') as f:
+    with open(csv_file, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row['st_event_name'] != target_event_name:
@@ -538,28 +653,38 @@ def format_json_case(record, defined_params=None):
     格式化JSON案例，包含预置属性和业务属性。
     defined_params 不为空时，业务属性展示方案定义的参数；
     方案外多余参数单独放入「多余参数（方案未定义）」区块，与警告对应。
+    预置/公共属性白名单 = 硬编码 5 个 st_ 预置属性 + Excel「预置属性和公共属性」中的公共属性。
     """
     raw_message = record['raw_message']
     properties = record['properties']
-    
+
+    # 报告信封字段（便于对照）+ Excel 公共属性（出现在 properties 中的才展示）
+    preset = {
+        'st_pk_id': raw_message.get('st_pk_id', ''),
+        'st_status': record.get('st_status', ''),
+        'st_user_id': raw_message.get('st_user_id', ''),
+        'st_role_id': raw_message.get('st_role_id', ''),
+        'st_account_id': raw_message.get('st_account_id', ''),
+        'st_distinct_id': raw_message.get('st_distinct_id', ''),
+        'st_event_name': raw_message.get('st_event_name', ''),
+        'st_event_time': raw_message.get('st_event_time', ''),
+        'st_event_datetime': record.get('st_event_datetime', ''),
+    }
+    for key in SYSTEM_PARAMS:
+        if key in REPORT_ENVELOPE_FIELDS or key in preset:
+            # 已在信封区展示；若 properties 也有同名字段则覆盖为实际上报值
+            if key in properties:
+                preset[key] = properties[key]
+            continue
+        if key in properties:
+            preset[key] = properties[key]
+
     case_data = {
-        '预置属性和公共属性': {
-            'st_pk_id': raw_message.get('st_pk_id', ''),
-            'st_status': record.get('st_status', ''),
-            'st_user_id': raw_message.get('st_user_id', ''),
-            'st_role_id': raw_message.get('st_role_id', ''),
-            'st_account_id': raw_message.get('st_account_id', ''),
-            'st_distinct_id': raw_message.get('st_distinct_id', ''),
-            'st_event_name': raw_message.get('st_event_name', ''),
-            'st_event_time': raw_message.get('st_event_time', ''),
-            'st_event_datetime': record.get('st_event_datetime', ''),
-            'platform_type': properties.get('platform_type', ''),
-            'adid': properties.get('adid', '')
-        },
+        '预置属性和公共属性': preset,
         '业务属性': {}
     }
     extra_props = {}
-    
+
     for key in properties:
         if key in SYSTEM_PARAMS:
             continue
@@ -567,10 +692,10 @@ def format_json_case(record, defined_params=None):
             extra_props[key] = properties[key]
             continue
         case_data['业务属性'][key] = properties[key]
-    
+
     if extra_props:
         case_data['多余参数（方案未定义）'] = extra_props
-    
+
     return case_data
 
 def format_case_json_text(case_data):
@@ -667,6 +792,11 @@ def format_error_or_warning(record, point=None, stored_only=False):
     }
     parts = []
     if not stored_only:
+        # 未来事件时间：不参与「取最新」判定；若仍被展示则补充说明
+        if not is_not_future_event(record):
+            parts.append(
+                '错误原因：事件时间（st_event_time）晚于检验时刻，已排除出「取最新」判定范围'
+            )
         errors = get_system_errors(record, compliance)
         if errors:
             parts.append('错误原因：' + '；'.join(errors))
@@ -682,17 +812,31 @@ def get_error_reason(record):
     """兼容旧调用，等同于 format_error_or_warning。"""
     return format_error_or_warning(record)
 
-def classify_results(results, point):
+def classify_results(results, point, now_ms=None):
     """
     每个点位仅取最新一条匹配记录判定上报/入库。
+    「最新」限定为 st_event_time <= 检验时刻；未来时间记录不参与判定。
     入库案例与合规判定使用同一条 case_record（已入库时取最新入库记录）。
+
+    若候选全是未来时间：仍算已上报，但不可用于入库判定（入库=否），
+    用其中时间最晚的一条作展示与错误说明。
     """
-    latest = get_latest_record(results)
-    if not latest:
+    if not results:
         return None, None, False, False, False
+
     has_reported = True
+    if now_ms is None:
+        now_ms = get_validation_now_ms()
+
+    latest = get_latest_record(results, now_ms)
+    if not latest:
+        # 仅有未来时间记录：上报有据，但不纳入入库判定
+        latest_any = max(results, key=event_time_value)
+        compliance = get_compliance_from_record(latest_any, point)
+        return latest_any, latest_any, True, False, compliance['is_compliant']
+
     has_stored = str(latest.get('st_status', '')) == '1'
-    case_record = get_latest_stored_record(results) if has_stored else latest
+    case_record = get_latest_stored_record(results, now_ms) if has_stored else latest
     compliance = get_compliance_from_record(case_record, point)
     is_compliant = compliance['is_compliant']
     return latest, case_record, has_reported, has_stored, is_compliant
@@ -1005,6 +1149,12 @@ def main():
     print(f'埋点方案: {excel_file}')
     print(f'测试数据: {csv_file}')
     print('')
+
+    # 预置 st_ 硬编码 + Excel 公共属性（其余必须从 Sheet 获取）
+    system_params, excel_common = apply_system_params_from_excel(excel_file)
+    print(f'预置属性（硬编码）: {", ".join(PRESET_ST_PARAMS)}')
+    print(f'公共属性（来自Excel）: {", ".join(excel_common) if excel_common else "（无）"}')
+    print(f'合计不校验多余: {", ".join(system_params)}')
     
     # 解析序号范围
     target_numbers = parse_number_sequence(seq_range)
@@ -1044,7 +1194,13 @@ def main():
         })
         
         latest_dt = latest.get('st_event_datetime', '') if latest else ''
-        print(f"序号{point['序号']}: {point['埋点信息']} - 候选{len(results)}条, 取最新({latest_dt}), 上报={'是' if has_reported else '否'}, 入库={'是' if has_stored else '否'}, 合规={'是' if is_compliant else '否'}")
+        future_n = count_future_records(results)
+        future_hint = f', 排除未来时间{future_n}条' if future_n else ''
+        print(
+            f"序号{point['序号']}: {point['埋点信息']} - 候选{len(results)}条{future_hint}, "
+            f"取最新({latest_dt}), 上报={'是' if has_reported else '否'}, "
+            f"入库={'是' if has_stored else '否'}, 合规={'是' if is_compliant else '否'}"
+        )
     
     # 生成HTML报告
     html_content = generate_html_report(all_results, input_meta={

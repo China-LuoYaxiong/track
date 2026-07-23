@@ -44,12 +44,13 @@
 
 **判断条件：**
 - 取该点位**最新一条**候选匹配记录（按 `st_event_time` 降序）
+- **仅考虑** `st_event_time` **≤ 检验时刻**（脚本执行当前时间）的记录；未来时间记录不参与取最新
 - 最新一条 `st_status` = 1 即算入库成功
 - **多余参数不阻断入库判定**（仅生成警告，**不影响合规判定**）
 
 **结果：**
-- ✅ 是：最新一条 `st_status=1`
-- ❌ 否：无匹配记录，或最新一条 `st_status≠1`
+- ✅ 是：判定用最新一条 `st_status=1`
+- ❌ 否：无匹配记录，或判定用最新一条 `st_status≠1`，或候选全为未来时间
 
 ### 3. 合规验证
 
@@ -138,13 +139,15 @@
 # 该点位「上报参数详情」白名单
 defined_params = ['current_page_name', 'ref_page_url', 'element_name']
 
-# 系统预置参数（不参与校验）
-system_params = ['extend', 'adid', 'current_page_url', 'platform_type']
+# 预置属性（硬编码）+ 公共属性（仅从 Excel「预置属性和公共属性」Sheet 获取）
+preset_st = ['st_role_id', 'st_account_id', 'st_distinct_id', 'st_event_name', 'st_event_time']
+excel_common = load_from_excel('预置属性和公共属性')  # 如 platform_type、adid、utm_source、channel …
+system_params = preset_st + [p for p in excel_common if p not in preset_st]
 
 # 实际参数
 actual_params = list(properties.keys())
 
-# 多余参数 = 实际参数 - 白名单 - 系统预置参数（仅警告，不影响合规）
+# 多余参数 = 实际参数 - 上报参数白名单 - Excel预置/公共属性（仅警告，不影响合规）
 extra_params = [p for p in actual_params if p not in defined_params and p not in system_params]
 
 # 缺失必填参数 = 必填参数 - 实际参数（可选参数缺失忽略）
@@ -162,8 +165,9 @@ is_compliant = not missing_params and not nested_issues
 
 ### 4. 展示规则
 
-- **判定记录**：每个点位在所有候选中按 `st_event_time` 取**最新一条**判定是否上报/是否入库
-- **入库案例与入库错误原因或警告**：共用同一条 `case_record`（已入库时取最新 `st_status=1` 记录），基于该记录 `properties` **实时**计算合规结果，保证两列数据一致
+- **判定记录**：每个点位在所有候选中按 `st_event_time` 取**最新一条**判定是否上报/是否入库；**排除** `st_event_time` 晚于检验时刻的记录
+- **入库案例与入库错误原因或警告**：共用同一条 `case_record`（已入库时取最新 `st_status=1` 且事件时间≤检验时刻的记录），基于该记录 `properties` **实时**计算合规结果，保证两列数据一致
+- **仅有未来时间候选**：仍算已上报，入库=否；错误原因注明事件时间晚于检验时刻
 - 已入库且合规：入库案例展示白名单 + 多余参数区块；无警告/不合规
 - 已入库但不合规：同上；显示**不合规**（及可能的**警告**）；错误案例为「无」
 - 未入库：显示**错误原因**；错误案例展示 `latest` 完整 JSON
@@ -231,14 +235,14 @@ element_tab={曝光来源...}
 | platform_type | 平台类型 | properties |
 | adid | 广告ID | properties |
 
-### 系统预置参数（不参与校验）
+### 预置属性和公共属性（不参与多余参数校验）
 
-| 参数名 | 说明 |
-|--------|------|
-| extend | 扩展信息 |
-| adid | 广告ID |
-| current_page_url | 当前页面URL |
-| platform_type | 平台类型 |
+| 来源 | 字段 |
+|------|------|
+| **预置属性（硬编码）** | `st_role_id`、`st_account_id`、`st_distinct_id`、`st_event_name`、`st_event_time` |
+| **公共属性（必须从 Excel）** | Excel「预置属性和公共属性」Sheet 中除上述 5 个以外的属性名称（如 `platform_type`、`adid`、`utm_source`、`channel`） |
+
+Sheet 中没有的公共字段（即便历史上常见如 `extend`、`current_page_url`）会计入多余参数警告。
 
 ### 业务属性（埋点方案定义）
 
@@ -406,8 +410,9 @@ AND properties.element_module == 'search_confirm'
 | `is_reported_stored_non_compliant(item)` | 判定点位是否已上报、已入库但不合规 |
 | `is_reported_not_stored(item)` | 判定点位是否已上报但未入库 |
 | `is_not_reported(item)` | 判定点位是否未上报 |
-| `get_latest_record(results)` | 取最新一条匹配记录，判定是否上报/是否入库 |
-| `get_latest_stored_record(results)` | 取最新已入库记录，作为 `case_record` |
+| `get_latest_record(results, now_ms=None)` | 在事件时间≤检验时刻的候选中取最新，判定是否上报/是否入库 |
+| `get_latest_stored_record(results, now_ms=None)` | 同上范围内取最新已入库记录，作为 `case_record` |
+| `filter_not_future_records(results, now_ms=None)` | 排除 `st_event_time` 晚于检验时刻的记录 |
 | `classify_results(results, point)` | 返回 `latest`、`case_record`、上报/入库/合规状态 |
 | `get_compliance_from_record(record, point)` | 基于指定记录 properties 实时计算合规（与入库案例同源） |
 | `format_error_or_warning(record, point, stored_only)` | 生成错误/不合规/警告；`stored_only=True` 时仅展示不合规与警告 |

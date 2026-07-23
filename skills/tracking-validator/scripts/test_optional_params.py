@@ -7,7 +7,15 @@ import os
 import tempfile
 import unittest
 
-from validate import REQUIRED_CSV_COLUMNS, assert_csv_columns, is_optional_param_line, parse_params_from_detail
+from validate import (
+    REQUIRED_CSV_COLUMNS,
+    assert_csv_columns,
+    classify_results,
+    get_latest_record,
+    is_not_future_event,
+    is_optional_param_line,
+    parse_params_from_detail,
+)
 
 
 class TestOptionalParamParsing(unittest.TestCase):
@@ -92,6 +100,66 @@ class TestCsvColumns(unittest.TestCase):
                 assert_csv_columns(path)
         finally:
             os.unlink(path)
+
+
+class TestFutureEventTimeFilter(unittest.TestCase):
+    """取最新时排除 st_event_time 晚于检验时刻的记录。"""
+
+    def _rec(self, event_time_ms, status='1'):
+        return {
+            'st_event_time': event_time_ms,
+            'st_status': status,
+            'st_event_datetime': '',
+            'properties': {},
+            'extra_params': [],
+            'missing_params': [],
+            'nested_issues': [],
+            'raw_message': {'st_event_time': event_time_ms, 'properties': {}},
+            'st_error_info': '',
+        }
+
+    def test_future_excluded_from_latest(self):
+        now_ms = 1_700_000_000_000  # fixed
+        past = self._rec(now_ms - 3600_000, '1')
+        future = self._rec(now_ms + 7 * 86400_000, '2')
+        self.assertTrue(is_not_future_event(past, now_ms))
+        self.assertFalse(is_not_future_event(future, now_ms))
+        latest = get_latest_record([past, future], now_ms)
+        self.assertIs(latest, past)
+
+    def test_classify_prefers_past_success_over_future_fail(self):
+        now_ms = 1_700_000_000_000
+        past_ok = self._rec(now_ms - 1000, '1')
+        future_fail = self._rec(now_ms + 86400_000, '2')
+        point = {
+            '定义参数': ['element_name'],
+            '上报参数详情': 'element_name=foo',
+            '可选参数': [],
+        }
+        past_ok['properties'] = {'element_name': 'foo'}
+        future_fail['properties'] = {'element_name': 'foo'}
+        latest, case, reported, stored, compliant = classify_results(
+            [past_ok, future_fail], point, now_ms=now_ms
+        )
+        self.assertTrue(reported)
+        self.assertTrue(stored)
+        self.assertIs(latest, past_ok)
+        self.assertIs(case, past_ok)
+
+    def test_only_future_reported_not_stored(self):
+        now_ms = 1_700_000_000_000
+        future = self._rec(now_ms + 1000, '2')
+        point = {
+            '定义参数': [],
+            '上报参数详情': '',
+            '可选参数': [],
+        }
+        latest, case, reported, stored, compliant = classify_results(
+            [future], point, now_ms=now_ms
+        )
+        self.assertTrue(reported)
+        self.assertFalse(stored)
+        self.assertIs(latest, future)
 
 
 if __name__ == '__main__':
